@@ -10,6 +10,7 @@
 
 #include <JuceHeader.h>
 #include "FilterClasses.h"
+#include "DistortionProcessor.h"
 
 //==============================================================================
 /**
@@ -75,6 +76,12 @@ private:
     float crossoverFreq1 = 200.0f;
     float crossoverFreq2 = 1000.0f;
     float crossoverFreq3 = 5000.0f;
+
+    //distortion processor
+    DistortionProcessor lowBandDistortion;
+    DistortionProcessor lowMidBandDistortion;
+    DistortionProcessor highMidBandDistortion;
+    DistortionProcessor highBandDistortion;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MBDistortionAudioProcessor)
         

@@ -128,6 +128,12 @@ void MBDistortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
         mHighBandHP[channel].setCutoff(crossoverFreq3);
     }
 
+    //initalise distortion types
+    lowBandDistortion.setDistortionType(DistortionTypes::HardClip);
+    lowMidBandDistortion.setDistortionType(DistortionTypes::SoftClip);
+    highMidBandDistortion.setDistortionType(DistortionTypes::FullRectify);
+    highBandDistortion.setDistortionType(DistortionTypes::HalfRectify);
+
 }
 
 void MBDistortionAudioProcessor::releaseResources()
@@ -194,13 +200,16 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             float high = input - low - lowMid - highMid;
 
             //ANY PROCESSING DONE HERE
+            low = lowBandDistortion.processSample(low);
+            lowMid = lowMidBandDistortion.processSample(lowMid);
+            highMid = highMidBandDistortion.processSample(highMid);
+            high = highBandDistortion.processSample(high);
 
             //output
-            float output = low + lowMid + highMid + high;
+            float output = (low + lowMid + highMid + high) * 0.25f;
             channelData[sample] = output;
 
         }
-
     }
 }
 

@@ -55,6 +55,10 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    //==============================================================================
+    void setBandDistortionType(int bandIndex, DistortionTypes type);
+
+    //==============================================================================
     //APVTS
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     juce::AudioProcessorValueTreeState parameters{ *this, nullptr, "Parameters", createParameterLayout() };

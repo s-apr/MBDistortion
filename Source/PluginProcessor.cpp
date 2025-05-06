@@ -159,12 +159,6 @@ void MBDistortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
         mHighBandHP[channel].setCutoff(crossoverFreq3);
     }
 
-    //initalise distortion types
-    //lowBandDistortion.setDistortionType(DistortionTypes::TYPE);
-    //lowMidBandDistortion.setDistortionType(DistortionTypes::TYPE);
-    //highMidBandDistortion.setDistortionType(DistortionTypes::TYPE);
-    //highBandDistortion.setDistortionType(DistortionTypes::TYPE);
-
 }
 
 void MBDistortionAudioProcessor::releaseResources()
@@ -210,6 +204,9 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
+    //check for drive value changes
+    //check for distortion type changes
+
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
         auto* channelData = buffer.getWritePointer (channel);
@@ -222,15 +219,17 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             //split bands
             float low = mLowBandLP[channel].process(input);
 
-            float lowMidInput = input - low;
-            float lowMid = mLowMidBandLP[channel].process(mLowMidBandHP[channel].process(lowMidInput));
+            float lowMid = mLowMidBandLP[channel].process(mLowMidBandHP[channel].process(input));
 
-            float highMidInput = input - low - lowMid;
-            float highMid = mHighMidBandLP[channel].process(mHighMidBandHP[channel].process(highMidInput));
+            float highMid = mHighMidBandLP[channel].process(mHighMidBandHP[channel].process(input));
 
-            float high = input - low - lowMid - highMid;
+            float high = mHighBandHP[channel].process(input);
 
             //ANY PROCESSING DONE HERE
+            low = lowBandDistortion.processSample(low);
+            lowMid = lowMidBandDistortion.processSample(lowMid);
+            highMid = highMidBandDistortion.processSample(highMid);
+            high = highBandDistortion.processSample(high);
 
             //output
             //need to be limited or gainstaged somehow
@@ -272,4 +271,17 @@ void MBDistortionAudioProcessor::setStateInformation (const void* data, int size
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new MBDistortionAudioProcessor();
+}
+
+//Distortion Types
+void MBDistortionAudioProcessor::setBandDistortionType(int bandIndex, DistortionTypes type)
+{
+    switch (bandIndex)
+    {
+    case 0: lowBandDistortion.setDistortionType(type); break;
+    case 1: lowMidBandDistortion.setDistortionType(type); break;
+    case 2: highMidBandDistortion.setDistortionType(type); break;
+    case 3: highBandDistortion.setDistortionType(type); break;
+    default: break; // invalid index
+    }
 }

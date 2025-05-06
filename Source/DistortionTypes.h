@@ -11,6 +11,7 @@
 #pragma once
 
 enum class DistortionTypes {
+    None,
     HardClip,
     SoftClip,
     ExpDistortion,

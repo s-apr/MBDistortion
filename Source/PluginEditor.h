@@ -24,6 +24,7 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
     void addSliderRotary(juce::Slider& slider);
+    void addComboBox(juce::ComboBox& comboBox);
 
 private:
     // This reference is provided as a quick way for your editor to
@@ -42,6 +43,9 @@ private:
     SliderAttachment band2DriveAttachment{ audioProcessor.parameters, "band2drive", band2Drive };
     SliderAttachment band3DriveAttachment{ audioProcessor.parameters, "band3drive", band3Drive };
     SliderAttachment band4DriveAttachment{ audioProcessor.parameters, "band4drive", band4Drive };
+
+    //distortion selectors
+    juce::ComboBox band1Selector, band2Selector, band3Selector, band4Selector;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MBDistortionAudioProcessorEditor)
 };

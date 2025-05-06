@@ -23,6 +23,7 @@ void DistortionProcessor::reset() {
 
 float DistortionProcessor::processSample(float input) {
     switch (type) {
+    case DistortionTypes::None: return input;
     case DistortionTypes::HardClip: return hardClip(input);
     case DistortionTypes::SoftClip: return softClip(input);
     case DistortionTypes::ExpDistortion: return expDistortion(input);

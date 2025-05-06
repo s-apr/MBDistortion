@@ -10,7 +10,7 @@
 
 #include "DistortionProcessor.h"
 #include <cmath>
-#include <Algorithm>
+#include <algorithm>
 
 void DistortionProcessor::setDistortionType(DistortionTypes newType) {
     type = newType;

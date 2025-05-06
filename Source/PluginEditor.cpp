@@ -15,7 +15,14 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor (MBDistortion
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize (400, 300);
+    setSize (400, 300); 
+
+    //add sliders
+    addSliderRotary(band1Drive);
+    addSliderRotary(band2Drive);
+    addSliderRotary(band3Drive);
+    addSliderRotary(band4Drive);
+
 }
 
 MBDistortionAudioProcessorEditor::~MBDistortionAudioProcessorEditor()
@@ -30,11 +37,16 @@ void MBDistortionAudioProcessorEditor::paint (juce::Graphics& g)
 
     g.setColour (juce::Colours::white);
     g.setFont (juce::FontOptions (15.0f));
-    g.drawFittedText ("Hello World!", getLocalBounds(), juce::Justification::centred, 1);
 }
 
 void MBDistortionAudioProcessorEditor::resized()
 {
-    // This is generally where you'll want to lay out the positions of any
-    // subcomponents in your editor..
+    //flexbox
+}
+
+void MBDistortionAudioProcessorEditor::addSliderRotary(juce::Slider& slider) {
+    slider.setSliderStyle(juce::Slider::Rotary);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 20);
+    slider.setNumDecimalPlacesToDisplay(2);
+    addAndMakeVisible(&slider);
 }

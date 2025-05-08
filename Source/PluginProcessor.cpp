@@ -281,8 +281,16 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     highMidBandDistortion.setDistortionType(static_cast<DistortionTypes>(band3Type));
     highBandDistortion.setDistortionType(static_cast<DistortionTypes>(band4Type));
 
-    //fetch other params
-    //inputgain, outputain, mixlevel, isBypassed, crossover freqs
+    //other params
+    //inputgain, outputgain
+    float inputGain = *parameters.getRawParameterValue("inputGain");
+    float outputGain = *parameters.getRawParameterValue("outputGain");
+
+    //convert dB to linear
+    float inputGainLinear = pow(10, inputGain / 20);
+    float outputGainLinear = pow(10, outputGain / 20);
+
+    //mixlevel, isBypassed, crossover freqs, ETC(?)
 
     //TODO dynamic crossover updates
     //check if crossoverfreqs 1-3 have changed
@@ -295,16 +303,15 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     {
         auto* channelData = buffer.getWritePointer (channel);
 
-        //store original input for mix/bypass
-
         for (int sample = 0; sample < numSamples; sample++) {
 
             //input
             float input = channelData[sample];
             //store original input for mix/bypass
+            //??? maybe
 
             //apply input gain
-            //input *= inputgain
+            input *= inputGainLinear;
 
             //split bands
             float low = mLowBandLP[channel].process(input);
@@ -333,14 +340,19 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             //low *= band1postlevel
             //...etc
 
+            //sum bands
+            float processedSignal = (low + lowMid + highMid + high);
+
             //apply mix
+            //eventually = (processedSignal * mixLevel) + (input * (1.0f - mixLevel));
+            float mixedOutput = processedSignal;
 
             //apply output gain
+            float finalOutput = mixedOutput * outputGainLinear; 
 
             //some kind of limiter (maybe clipper)
 
-            float output = (low + lowMid + highMid + high);
-            channelData[sample] = output;
+            channelData[sample] = finalOutput;
 
         }
     }

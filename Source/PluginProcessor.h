@@ -59,6 +59,7 @@ public:
     void setBandDistortionType(int bandIndex, DistortionTypes type);
 
     //==============================================================================
+    
     //APVTS
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     juce::AudioProcessorValueTreeState parameters{ *this, nullptr, "Parameters", createParameterLayout() };

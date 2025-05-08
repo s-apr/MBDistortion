@@ -90,6 +90,10 @@ private:
     DistortionProcessor lowMidBandDistortion;
     DistortionProcessor highMidBandDistortion;
     DistortionProcessor highBandDistortion;
+
+    //spectrum visualisation
+    //juce::dsp::FFT mFFT;
+    //juce::dsp::WindowingFunction<float> mWindow;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MBDistortionAudioProcessor)
         

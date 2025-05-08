@@ -47,5 +47,12 @@ private:
     //distortion selectors
     juce::ComboBox band1Selector, band2Selector, band3Selector, band4Selector;
 
+    //distortion selector attachments
+    using ComboBoxAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
+    std::unique_ptr<ComboBoxAttachment> band1TypeAttachment;
+    std::unique_ptr<ComboBoxAttachment> band2TypeAttachment;
+    std::unique_ptr<ComboBoxAttachment> band3TypeAttachment;
+    std::unique_ptr<ComboBoxAttachment> band4TypeAttachment;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MBDistortionAudioProcessorEditor)
 };

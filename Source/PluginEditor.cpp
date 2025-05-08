@@ -29,23 +29,15 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionA
     addComboBox(band3Selector);
     addComboBox(band4Selector);
 
-    //combo box changes
-    band1Selector.onChange = [this]() {
-        DistortionTypes type = static_cast<DistortionTypes>(band1Selector.getSelectedId() - 1);
-        audioProcessor.setBandDistortionType(0, type);
-    };
-    band2Selector.onChange = [this]() {
-        DistortionTypes type = static_cast<DistortionTypes>(band2Selector.getSelectedId() - 1);
-        audioProcessor.setBandDistortionType(1, type);
-    };
-    band3Selector.onChange = [this]() {
-        DistortionTypes type = static_cast<DistortionTypes>(band3Selector.getSelectedId() - 1);
-        audioProcessor.setBandDistortionType(2, type);
-    };
-    band4Selector.onChange = [this]() {
-        DistortionTypes type = static_cast<DistortionTypes>(band4Selector.getSelectedId() - 1);
-        audioProcessor.setBandDistortionType(3, type);
-    };
+    //attach comboboxes
+    //combo boxes must be attatched AFTER being populated not BEFORE
+    //this ensures persitience during closing/opening plugin window
+    band1TypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.parameters, "band1type", band1Selector);
+    band2TypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.parameters, "band2type", band2Selector);
+    band3TypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.parameters, "band3type", band3Selector);
+    band4TypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.parameters, "band4type", band4Selector);
+
+
 }
 
 MBDistortionAudioProcessorEditor::~MBDistortionAudioProcessorEditor()
@@ -114,8 +106,6 @@ void MBDistortionAudioProcessorEditor::addComboBox(juce::ComboBox& comboBox) {
     comboBox.addItem("Asymmetric", 7);
     comboBox.addItem("Full Rectify", 8);
     comboBox.addItem("Half Rectify", 9);
-
-    comboBox.setSelectedId(1);
 
     addAndMakeVisible(comboBox);
 }

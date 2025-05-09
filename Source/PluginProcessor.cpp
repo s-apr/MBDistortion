@@ -108,7 +108,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout MBDistortionAudioProcessor::
         std::make_unique<juce::AudioParameterFloat>( 
             juce::ParameterID("crossover3freq", 1), "Crossover 3 Frequency",
             juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.25f),
-            5000.0f, "Hz")
+            5000.0f, "Hz"),
+
+        //oversampling options
+        std::make_unique<juce::AudioParameterChoice>(
+            juce::ParameterID("oversamplingFactor", 1),
+            "Oversampling",
+            juce::StringArray{"Off", "2x", "4x", "8x"},
+            0) //default "Off"
     };
 }
 
@@ -177,8 +184,30 @@ void MBDistortionAudioProcessor::changeProgramName (int index, const juce::Strin
 //==============================================================================
 void MBDistortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
+    //sample rate
+    mHostSampleRate = sampleRate;
+
     //get num channels
     int numChannels = getNumInputChannels();
+
+    //update oversample factor first
+    updateOversamplefactor();
+
+    int oversampleStage = 0;
+    if (mCurrentOversamplingFactor == 2) oversampleStage = 1;
+    else if (mCurrentOversamplingFactor == 4) oversampleStage = 2;
+    else if (mCurrentOversamplingFactor == 8) oversampleStage = 3;
+
+    //setup oversamplers
+    mOversample.clear();
+
+    //create oversampler objects
+    for (int channel = 0; channel < numChannels; channel++) {
+        auto oversampler = std::make_unique<juce::dsp::Oversampling<float>>(
+            1, oversampleStage, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR);
+        oversampler->initProcessing(static_cast<size_t>(samplesPerBlock));
+        mOversample.push_back(std::move(oversampler));
+    }
 
     //initalise all filter objects
     mLowBandLP.resize(numChannels);
@@ -249,111 +278,96 @@ bool MBDistortionAudioProcessor::isBusesLayoutSupported (const BusesLayout& layo
 void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
+
+    //oversampling
+    int previousFactor = mCurrentOversamplingFactor;
+    updateOversamplefactor();
+    if (previousFactor != mCurrentOversamplingFactor)
+        prepareToPlay(mHostSampleRate, buffer.getNumSamples());
+
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    float numSamples = buffer.getNumSamples();
-
+    //clear other outputs
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    //update drive values
-    float band1Drive = *parameters.getRawParameterValue("band1drive");
-    float band2Drive = *parameters.getRawParameterValue("band2drive");
-    float band3Drive = *parameters.getRawParameterValue("band3drive");
-    float band4Drive = *parameters.getRawParameterValue("band4drive");
+    float band1DriveLinear = pow(10, *parameters.getRawParameterValue("band1drive") / 20);
+    float band2DriveLinear = pow(10, *parameters.getRawParameterValue("band2drive") / 20);
+    float band3DriveLinear = pow(10, *parameters.getRawParameterValue("band3drive") / 20);
+    float band4DriveLinear = pow(10, *parameters.getRawParameterValue("band4drive") / 20);
 
-    //convert dB to linear
-    float band1DriveLinear = pow(10, band1Drive / 20);
-    float band2DriveLinear = pow(10, band2Drive / 20);
-    float band3DriveLinear = pow(10, band3Drive / 20);
-    float band4DriveLinear = pow(10, band4Drive / 20);
-
-    //update distortion types
-    int band1Type = *parameters.getRawParameterValue("band1type");
-    int band2Type = *parameters.getRawParameterValue("band2type");
-    int band3Type = *parameters.getRawParameterValue("band3type");
-    int band4Type = *parameters.getRawParameterValue("band4type");
-
-    //update distortion types
-    lowBandDistortion.setDistortionType(static_cast<DistortionTypes>(band1Type));
-    lowMidBandDistortion.setDistortionType(static_cast<DistortionTypes>(band2Type));
-    highMidBandDistortion.setDistortionType(static_cast<DistortionTypes>(band3Type));
-    highBandDistortion.setDistortionType(static_cast<DistortionTypes>(band4Type));
+    //set distortion types
+    lowBandDistortion.setDistortionType(static_cast<DistortionTypes>(int(*parameters.getRawParameterValue("band1type"))));
+    lowMidBandDistortion.setDistortionType(static_cast<DistortionTypes>(int(*parameters.getRawParameterValue("band2type"))));
+    highMidBandDistortion.setDistortionType(static_cast<DistortionTypes>(int(*parameters.getRawParameterValue("band3type"))));
+    highBandDistortion.setDistortionType(static_cast<DistortionTypes>(int(*parameters.getRawParameterValue("band4type"))));
 
     //other params
     //inputgain, outputgain
-    float inputGain = *parameters.getRawParameterValue("inputGain");
-    float outputGain = *parameters.getRawParameterValue("outputGain");
-
-    //convert dB to linear
-    float inputGainLinear = pow(10, inputGain / 20);
-    float outputGainLinear = pow(10, outputGain / 20);
-
-    //mixlevel, isBypassed, crossover freqs, ETC(?)
-
-    //TODO dynamic crossover updates
-    //check if crossoverfreqs 1-3 have changed
-    //if they have call setCutoff()
-
-    //TODO implement bypass
-    //if (ifBypassed) {return} input = output - no processing
+    float inputGainLinear = pow(10, *parameters.getRawParameterValue("inputGain") / 20);
+    float outputGainLinear = pow(10, *parameters.getRawParameterValue("outputGain") / 20);
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
-        auto* channelData = buffer.getWritePointer (channel);
+        if (mCurrentOversamplingFactor > 1) {
+            auto& oversampler = *mOversample[channel];
+            //'buffer' is ORIGINAL BUFFER
+            auto channelBlock = juce::dsp::AudioBlock<float>(buffer).getSingleChannelBlock(channel);
+            auto upscaledBlock = oversampler.processSamplesUp(channelBlock);
 
-        for (int sample = 0; sample < numSamples; sample++) {
+            float* samples = upscaledBlock.getChannelPointer(0);
+            int numOversampled = static_cast<int>(upscaledBlock.getNumSamples());
+            
+            for (int i = 0; i < numOversampled; i++)
+            {
+                float input = samples[i] * inputGainLinear;
 
-            //input
-            float input = channelData[sample];
-            //store original input for mix/bypass
-            //??? maybe
+                float low = mLowBandLP[channel].process(input);
+                float lowMid = mLowMidBandLP[channel].process(mLowMidBandHP[channel].process(input));
+                float highMid = mHighMidBandLP[channel].process(mHighMidBandHP[channel].process(input));
+                float high = mHighBandHP[channel].process(input);
 
-            //apply input gain
-            input *= inputGainLinear;
+                low *= band1DriveLinear;
+                low = lowBandDistortion.processSample(low);
+                lowMid *= band2DriveLinear;
+                lowMid = lowMidBandDistortion.processSample(lowMid);
+                highMid *= band3DriveLinear;
+                highMid = highMidBandDistortion.processSample(highMid);
+                high *= band4DriveLinear;
+                high = highBandDistortion.processSample(high);
 
-            //split bands
-            float low = mLowBandLP[channel].process(input);
-            float lowMid = mLowMidBandLP[channel].process(mLowMidBandHP[channel].process(input));
-            float highMid = mHighMidBandLP[channel].process(mHighMidBandHP[channel].process(input));
-            float high = mHighBandHP[channel].process(input);
+                samples[i] = (low + lowMid + highMid + high) * outputGainLinear;
 
-            //ANY PROCESSING DONE HERE
-            //lowband
-            low = low * band1DriveLinear;
-            low = lowBandDistortion.processSample(low);
+            }
 
-            //lowmid band
-            lowMid = lowMid * band2DriveLinear;
-            lowMid = lowMidBandDistortion.processSample(lowMid);
+            oversampler.processSamplesDown(channelBlock);
 
-            //highmid band
-            highMid = highMid * band3DriveLinear;
-            highMid = highMidBandDistortion.processSample(highMid);
+        }
+        else
+        {
+            auto* channelData = buffer.getWritePointer(channel);
 
-            //high band
-            high = high * band4DriveLinear;
-            high = highBandDistortion.processSample(high);
+            for (int sample = 0; sample < buffer.getNumSamples(); sample++) {
 
-            //TODO apply post band levels
-            //low *= band1postlevel
-            //...etc
+                float input = channelData[sample] * inputGainLinear;
 
-            //sum bands
-            float processedSignal = (low + lowMid + highMid + high);
+                float low = mLowBandLP[channel].process(input);
+                float lowMid = mLowMidBandLP[channel].process(mLowMidBandHP[channel].process(input));
+                float highMid = mHighMidBandLP[channel].process(mHighMidBandHP[channel].process(input));
+                float high = mHighBandHP[channel].process(input);
 
-            //apply mix
-            //eventually = (processedSignal * mixLevel) + (input * (1.0f - mixLevel));
-            float mixedOutput = processedSignal;
+                low *= band1DriveLinear;
+                low = lowBandDistortion.processSample(low);
+                lowMid *= band2DriveLinear;
+                lowMid = lowMidBandDistortion.processSample(lowMid);
+                highMid *= band3DriveLinear;
+                highMid = highMidBandDistortion.processSample(highMid);
+                high *= band4DriveLinear;
+                high = highBandDistortion.processSample(high);
 
-            //apply output gain
-            float finalOutput = mixedOutput * outputGainLinear; 
-
-            //some kind of limiter (maybe clipper)
-
-            channelData[sample] = finalOutput;
-
+                channelData[sample] = (low + lowMid + highMid + high) * outputGainLinear;
+            }
         }
     }
 }
@@ -402,3 +416,20 @@ void MBDistortionAudioProcessor::setBandDistortionType(int bandIndex, Distortion
     default: break; // invalid index
     }
 }
+
+//oversampling
+void MBDistortionAudioProcessor::updateOversamplefactor() {
+    int choice = *parameters.getRawParameterValue("oversamplingFactor");
+    //cast, getRawParameterValue returns float
+    int choiceIndex = static_cast<int>(choice);
+
+    switch (choiceIndex) {
+        case 0: mCurrentOversamplingFactor = 1; break; //off
+        case 1: mCurrentOversamplingFactor = 2; break; //x2
+        case 2: mCurrentOversamplingFactor = 4; break; //x4
+        case 3: mCurrentOversamplingFactor = 8; break; //x8
+        default: mCurrentOversamplingFactor = 1; break; //off
+    }
+}
+
+//update filters for oversampling

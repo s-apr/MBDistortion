@@ -57,6 +57,7 @@ public:
 
     //==============================================================================
     void setBandDistortionType(int bandIndex, DistortionTypes type);
+    void updateOversamplefactor();
 
     //==============================================================================
     
@@ -92,10 +93,11 @@ private:
     DistortionProcessor highMidBandDistortion;
     DistortionProcessor highBandDistortion;
 
-    //spectrum visualisation
-    //juce::dsp::FFT mFFT;
-    //juce::dsp::WindowingFunction<float> mWindow;
+    //oversampling (to avoid aliasing) global oversample
+    std::vector<std::unique_ptr<juce::dsp::Oversampling<float>>> mOversample;
+    float mHostSampleRate = 44100;
+    int mCurrentOversamplingFactor = 1; //1 = "Off"
+    bool mOversamplingUpdate = true;
     
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MBDistortionAudioProcessor)
-        
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MBDistortionAudioProcessor)   
 };

@@ -10,11 +10,13 @@
 
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
+#include "OscilloscopeComponent.h"
 
 //==============================================================================
 /**
 */
-class MBDistortionAudioProcessorEditor  : public juce::AudioProcessorEditor
+class MBDistortionAudioProcessorEditor : public juce::AudioProcessorEditor,
+    juce::Timer
 {
 public:
     MBDistortionAudioProcessorEditor (MBDistortionAudioProcessor&);
@@ -27,9 +29,12 @@ public:
     void addComboBox(juce::ComboBox& comboBox);
 
 private:
+    void timerCallback() override;
+
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.
     MBDistortionAudioProcessor& audioProcessor;
+    OscilloscopeComponent oscilloscope;
 
     //band sliders 'drive'
     juce::Slider band1Drive;

@@ -15,6 +15,22 @@
 //==============================================================================
 /**
 */
+
+//lecture 12 ring buffer
+class RingBuffer
+{
+public:
+    void resize(int newSize) { mBuffer.assign(newSize, 0.0f); }
+    bool hasNewData() const { return mReadPos != mWritePos; }
+    void write(float v) { mBuffer[mWritePos] = v; mWritePos = (mWritePos + 1) % size(); }
+    float read() { auto v = mBuffer[mReadPos]; mReadPos = (mReadPos + 1) % size(); return v; }
+    int size() const { return (int)mBuffer.size(); }
+
+private:
+    std::atomic<int> mReadPos{ 0 }, mWritePos{ 0 };
+    std::vector<float> mBuffer;
+};
+
 class MBDistortionAudioProcessor  : public juce::AudioProcessor
 {
 public:
@@ -58,12 +74,16 @@ public:
     //==============================================================================
     void setBandDistortionType(int bandIndex, DistortionTypes type);
     void updateOversamplefactor();
+    const double getEffectiveSampleRate();
 
     //==============================================================================
     
     //APVTS
     static juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
     juce::AudioProcessorValueTreeState parameters{ *this, nullptr, "Parameters", createParameterLayout() };
+
+    //osc ringbuffer
+    RingBuffer oscBuffer;
 
 private:
     //==============================================================================

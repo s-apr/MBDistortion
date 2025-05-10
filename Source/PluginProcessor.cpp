@@ -187,6 +187,9 @@ void MBDistortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     //sample rate
     mHostSampleRate = sampleRate;
 
+    //effective sample rate
+    double effectiveSampleRate = getEffectiveSampleRate();
+
     //get num channels
     int numChannels = getNumInputChannels();
 
@@ -219,12 +222,12 @@ void MBDistortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
 
     //initalise filters
     for (int channel = 0; channel < numChannels; channel++) {
-        mLowBandLP[channel].setSampleRate(sampleRate);
-        mLowMidBandHP[channel].setSampleRate(sampleRate);
-        mLowMidBandLP[channel].setSampleRate(sampleRate);
-        mHighMidBandHP[channel].setSampleRate(sampleRate);
-        mHighMidBandLP[channel].setSampleRate(sampleRate);
-        mHighBandHP[channel].setSampleRate(sampleRate);
+        mLowBandLP[channel].setSampleRate(effectiveSampleRate);
+        mLowMidBandHP[channel].setSampleRate(effectiveSampleRate);
+        mLowMidBandLP[channel].setSampleRate(effectiveSampleRate);
+        mHighMidBandHP[channel].setSampleRate(effectiveSampleRate);
+        mHighMidBandLP[channel].setSampleRate(effectiveSampleRate);
+        mHighBandHP[channel].setSampleRate(effectiveSampleRate);
     }
 
     //temp setting cuttoff frequencies
@@ -240,6 +243,10 @@ void MBDistortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
         mHighMidBandLP[channel].setCutoff(crossoverFreq3);
         mHighBandHP[channel].setCutoff(crossoverFreq3);
     }
+
+    //osc vis
+    //keep 100ms for audio
+    oscBuffer.resize(getSampleRate() * 0.1);
 
 }
 
@@ -316,9 +323,12 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             auto channelBlock = juce::dsp::AudioBlock<float>(buffer).getSingleChannelBlock(channel);
             auto upscaledBlock = oversampler.processSamplesUp(channelBlock);
 
+            //pointer to upsampled array
             float* samples = upscaledBlock.getChannelPointer(0);
+            //number of samples in upsampled array
             int numOversampled = static_cast<int>(upscaledBlock.getNumSamples());
             
+            //same sample for loop but with upsampledNumSamples
             for (int i = 0; i < numOversampled; i++)
             {
                 float input = samples[i] * inputGainLinear;
@@ -340,9 +350,7 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 samples[i] = (low + lowMid + highMid + high) * outputGainLinear;
 
             }
-
             oversampler.processSamplesDown(channelBlock);
-
         }
         else
         {
@@ -367,9 +375,17 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 high = highBandDistortion.processSample(high);
 
                 channelData[sample] = (low + lowMid + highMid + high) * outputGainLinear;
+
             }
         }
     }
+
+        auto* readPtr = buffer.getReadPointer(0);
+        for (int i = 0; i < buffer.getNumSamples(); i++)
+        {
+            oscBuffer.write(readPtr[i]);
+        }
+
 }
 
 //==============================================================================
@@ -432,4 +448,7 @@ void MBDistortionAudioProcessor::updateOversamplefactor() {
     }
 }
 
-//update filters for oversampling
+const double MBDistortionAudioProcessor::getEffectiveSampleRate()
+{
+    return mHostSampleRate * mCurrentOversamplingFactor;
+}

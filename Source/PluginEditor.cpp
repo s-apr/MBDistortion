@@ -11,11 +11,11 @@
 
 //==============================================================================
 MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionAudioProcessor& p)
-    : AudioProcessorEditor(&p), audioProcessor(p)
+    : AudioProcessorEditor(&p), audioProcessor(p), oscilloscope(p.oscBuffer)
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
-    setSize(400, 300);
+    audioProcessor.oscBuffer.resize(int(audioProcessor.getSampleRate() * 0.1));
 
     //add sliders
     addSliderRotary(band1Drive);
@@ -37,6 +37,10 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionA
     band3TypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.parameters, "band3type", band3Selector);
     band4TypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.parameters, "band4type", band4Selector);
 
+    addAndMakeVisible(oscilloscope);
+    setSize(800, 600);
+
+    startTimerHz(60);
 
 }
 
@@ -45,47 +49,50 @@ MBDistortionAudioProcessorEditor::~MBDistortionAudioProcessorEditor()
 }
 
 //==============================================================================
-void MBDistortionAudioProcessorEditor::paint (juce::Graphics& g)
+void MBDistortionAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
+    g.fillAll(juce::Colours::darkgrey);
+    g.setColour(juce::Colours::white);
 
-    g.setColour (juce::Colours::white);
-    g.setFont (juce::FontOptions (15.0f));
+    auto bounds = getLocalBounds().reduced(10);
+    int H = bounds.getHeight();
+
+    //top rectangle (oscilloscope outline)
+    int topH = int(H * 0.25f);
+    auto scopeOutline = bounds.removeFromTop(topH);
+    g.drawRect(scopeOutline, 2);
+
+    //separator oscilloscope and mid region
+    int sepY = scopeOutline.getBottom();
+    g.drawLine(float(scopeOutline.getX()), float(sepY),
+        float(scopeOutline.getRight()), float(sepY), 1.0f);
+
+    //mid rectangle (for crossover/global controls)
+    int midH = int(H * 0.15f);
+    auto midOutline = bounds.removeFromTop(midH);
+    g.drawRect(midOutline, 2);
+
+    //bottom: four equal columns
+    int numCols = 4;
+    int colW = bounds.getWidth() / numCols;
+    for (int i = 0; i < numCols; ++i)
+    {
+        auto col = bounds.removeFromLeft(colW);
+        g.drawRect(col, 2);
+    }
 }
 
 void MBDistortionAudioProcessorEditor::resized()
 {
-    //flexbox
-    juce::FlexBox outer;
-    outer.flexDirection = juce::FlexBox::Direction::column;
-    outer.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
+    auto area = getLocalBounds().reduced(10);
+    int H = area.getHeight();
 
-    //sliders
-    juce::FlexBox sliderRow;
-    sliderRow.flexDirection = juce::FlexBox::Direction::row;
-    sliderRow.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
+    //oscilloscope
+    int topH = int(H * 0.25f);
+    auto scopeArea = area.removeFromTop(topH);
+    oscilloscope.setBounds(scopeArea);
 
-    sliderRow.items.add(juce::FlexItem(band1Drive).withFlex(1.0f).withMinWidth(80));
-    sliderRow.items.add(juce::FlexItem(band2Drive).withFlex(1.0f).withMinWidth(80));
-    sliderRow.items.add(juce::FlexItem(band3Drive).withFlex(1.0f).withMinWidth(80));
-    sliderRow.items.add(juce::FlexItem(band4Drive).withFlex(1.0f).withMinWidth(80));
-
-    //combo box
-    juce::FlexBox selectorRow;
-    selectorRow.flexDirection = juce::FlexBox::Direction::row;
-    selectorRow.justifyContent = juce::FlexBox::JustifyContent::spaceBetween;
-
-    selectorRow.items.add(juce::FlexItem(band1Selector).withFlex(1.0f).withMinWidth(80));
-    selectorRow.items.add(juce::FlexItem(band2Selector).withFlex(1.0f).withMinWidth(80));
-    selectorRow.items.add(juce::FlexItem(band3Selector).withFlex(1.0f).withMinWidth(80));
-    selectorRow.items.add(juce::FlexItem(band4Selector).withFlex(1.0f).withMinWidth(80));
-
-    //layout
-    outer.items.add(juce::FlexItem(sliderRow).withFlex(3.0f));
-    outer.items.add(juce::FlexItem(selectorRow).withFlex(0.5f));
-    outer.performLayout(getLocalBounds().reduced(10));
-
+    //remaining 'area' used for mid & bottom controls
 }
 
 void MBDistortionAudioProcessorEditor::addSliderRotary(juce::Slider& slider) {
@@ -108,4 +115,8 @@ void MBDistortionAudioProcessorEditor::addComboBox(juce::ComboBox& comboBox) {
     comboBox.addItem("Half Rectify", 9);
 
     addAndMakeVisible(comboBox);
+}
+
+void MBDistortionAudioProcessorEditor::timerCallback() {
+    repaint();
 }

@@ -92,21 +92,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout MBDistortionAudioProcessor::
         std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID("masterMix", 1), "Master Mix",
             0.0f, 1.0f, 1.0f),
-        std::make_unique<juce::AudioParameterChoice>(
-            juce::ParameterID("bypass", 1), "Bypass",
-            juce::StringArray{"Off", "On"}, 0),
+        std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID("bypass", 1), "Bypass", false),
 
         //filter crossover controls
         std::make_unique<juce::AudioParameterFloat>( 
-            juce::ParameterID("crossover1freq", 1), "Crossover 1 Frequency",
+            juce::ParameterID("crossoverFreq1", 1), "Crossover 1 Frequency",
             juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.25f),
             200.0f, "Hz"),
         std::make_unique<juce::AudioParameterFloat>( 
-            juce::ParameterID("crossover2freq", 1), "Crossover 2 Frequency",
+            juce::ParameterID("crossoverFreq2", 1), "Crossover 2 Frequency",
             juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.25f),
             1000.0f, "Hz"),
         std::make_unique<juce::AudioParameterFloat>( 
-            juce::ParameterID("crossover3freq", 1), "Crossover 3 Frequency",
+            juce::ParameterID("crossoverFreq3", 1), "Crossover 3 Frequency",
             juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.25f),
             5000.0f, "Hz"),
 
@@ -115,7 +114,38 @@ juce::AudioProcessorValueTreeState::ParameterLayout MBDistortionAudioProcessor::
             juce::ParameterID("oversamplingFactor", 1),
             "Oversampling",
             juce::StringArray{"Off", "2x", "4x", "8x"},
-            0) //default "Off"
+            0), //default "Off"
+
+        //band levels
+        std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("band1level", 1), "Low Band Level",
+            juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f, 1.0),
+            0.0f, "dB"),
+        std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("band2level", 1), "Low Mid Band Level",
+            juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f, 1.0),
+            0.0f, "dB"),
+        std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("band3level", 1), "High Mid Band Level",
+            juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f, 1.0),
+            0.0f, "dB"),
+        std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("band4level", 1), "High Band Level",
+            juce::NormalisableRange<float>(-24.0f, 24.0f, 0.1f, 1.0),
+            0.0f, "dB"),
+
+        //std::make_unique<juce::AudioParameterBool>("band1solo", "Band 1 Solo", false),
+        //std::make_unique<juce::AudioParameterBool>("band1mute", "Band 1 Mute", false),
+        
+        //std::make_unique<juce::AudioParameterBool>("band2solo", "Band 2 Solo", false),
+        //std::make_unique<juce::AudioParameterBool>("band2mute", "Band 2 Mute", false),
+
+        //std::make_unique<juce::AudioParameterBool>("band3solo", "Band 3 Solo", false),
+        //std::make_unique<juce::AudioParameterBool>("band3mute", "Band 3 Mute", false),
+
+        //std::make_unique<juce::AudioParameterBool>("band4solo", "Band 4 Solo", false),
+        //std::make_unique<juce::AudioParameterBool>("band4mute", "Band 4 Mute", false),
+
     };
 }
 
@@ -286,6 +316,8 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
 {
     juce::ScopedNoDenormals noDenormals;
 
+    bool bypassOn = (*parameters.getRawParameterValue("bypass") > 0.5f);
+    
     //oversampling
     int previousFactor = mCurrentOversamplingFactor;
     updateOversamplefactor();
@@ -299,10 +331,10 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    float band1DriveLinear = pow(10, *parameters.getRawParameterValue("band1drive") / 20);
-    float band2DriveLinear = pow(10, *parameters.getRawParameterValue("band2drive") / 20);
-    float band3DriveLinear = pow(10, *parameters.getRawParameterValue("band3drive") / 20);
-    float band4DriveLinear = pow(10, *parameters.getRawParameterValue("band4drive") / 20);
+    float band1Drive = pow(10, *parameters.getRawParameterValue("band1drive") / 20.0f);
+    float band2Drive = pow(10, *parameters.getRawParameterValue("band2drive") / 20.0f);
+    float band3Drive = pow(10, *parameters.getRawParameterValue("band3drive") / 20.0f);
+    float band4Drive = pow(10, *parameters.getRawParameterValue("band4drive") / 20.0f);
 
     //set distortion types
     lowBandDistortion.setDistortionType(static_cast<DistortionTypes>(int(*parameters.getRawParameterValue("band1type"))));
@@ -311,9 +343,33 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     highBandDistortion.setDistortionType(static_cast<DistortionTypes>(int(*parameters.getRawParameterValue("band4type"))));
 
     //other params
-    //inputgain, outputgain
-    float inputGainLinear = pow(10, *parameters.getRawParameterValue("inputGain") / 20);
-    float outputGainLinear = pow(10, *parameters.getRawParameterValue("outputGain") / 20);
+    //inputgain, outputgain, masterMix
+    float inputGain = pow(10, *parameters.getRawParameterValue("inputGain") / 20.0f);
+    float outputGain = pow(10, *parameters.getRawParameterValue("outputGain") / 20.0f);
+    float masterMix = *parameters.getRawParameterValue("masterMix");
+
+    //band levels
+    float band1Level = std::pow(10.0f, *parameters.getRawParameterValue("band1level") / 20.0f);
+    float band2Level = std::pow(10.0f, *parameters.getRawParameterValue("band2level") / 20.0f);
+    float band3Level = std::pow(10.0f, *parameters.getRawParameterValue("band3level") / 20.0f);
+    float band4Level = std::pow(10.0f, *parameters.getRawParameterValue("band4level") / 20.0f);
+
+    //SOLO&MUTE
+    //bool solo[4] = {
+    //    *parameters.getRawParameterValue("band1solo") > 0.5f,
+    //    *parameters.getRawParameterValue("band2solo") > 0.5f,
+    //    *parameters.getRawParameterValue("band3solo") > 0.5f,
+    //    *parameters.getRawParameterValue("band4solo") > 0.5f
+    //};
+
+    //bool mute[4] = {
+    //    *parameters.getRawParameterValue("band1mute") > 0.5f,
+    //    *parameters.getRawParameterValue("band2mute") > 0.5f,
+    //    *parameters.getRawParameterValue("band3mute") > 0.5f,
+    //    *parameters.getRawParameterValue("band4mute") > 0.5f
+    //};
+
+    //bool anySolo = solo[0] || solo[1] || solo[2] || solo[3];
 
     for (int channel = 0; channel < totalNumInputChannels; ++channel)
     {
@@ -327,27 +383,49 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             float* samples = upscaledBlock.getChannelPointer(0);
             //number of samples in upsampled array
             int numOversampled = static_cast<int>(upscaledBlock.getNumSamples());
-            
+
+            if (bypassOn) {
+                for (int i = 0; i < numOversampled; i++)
+                    samples[i] *= inputGain;
+                oversampler.processSamplesDown(channelBlock);
+                continue;
+            }
+
             //same sample for loop but with upsampledNumSamples
             for (int i = 0; i < numOversampled; i++)
             {
-                float input = samples[i] * inputGainLinear;
+                float input = samples[i] * inputGain;
 
                 float low = mLowBandLP[channel].process(input);
                 float lowMid = mLowMidBandLP[channel].process(mLowMidBandHP[channel].process(input));
                 float highMid = mHighMidBandLP[channel].process(mHighMidBandHP[channel].process(input));
                 float high = mHighBandHP[channel].process(input);
 
-                low *= band1DriveLinear;
+                low *= band1Drive;
                 low = lowBandDistortion.processSample(low);
-                lowMid *= band2DriveLinear;
-                lowMid = lowMidBandDistortion.processSample(lowMid);
-                highMid *= band3DriveLinear;
-                highMid = highMidBandDistortion.processSample(highMid);
-                high *= band4DriveLinear;
-                high = highBandDistortion.processSample(high);
+                low *= band1Level;
 
-                samples[i] = (low + lowMid + highMid + high) * outputGainLinear;
+                lowMid *= band2Drive;
+                lowMid = lowMidBandDistortion.processSample(lowMid);
+                lowMid *= band2Level;
+
+
+                highMid *= band3Drive;
+                highMid = highMidBandDistortion.processSample(highMid);
+                highMid *= band3Level;
+
+
+                high *= band4Drive;
+                high = highBandDistortion.processSample(high);
+                high *= band4Level;
+
+                //if (mute[0] || (anySolo && !solo[0])) low = 0.0f;
+                //if (mute[1] || (anySolo && !solo[1])) lowMid = 0.0f;
+                //if (mute[2] || (anySolo && !solo[2])) highMid = 0.0f;
+                //if (mute[3] || (anySolo && !solo[3])) high = 0.0f;
+
+                float wet = (low + lowMid + highMid + high) * outputGain;
+                samples[i] = input * (1.0f - masterMix) + wet * masterMix;
 
             }
             oversampler.processSamplesDown(channelBlock);
@@ -356,25 +434,38 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         {
             auto* channelData = buffer.getWritePointer(channel);
 
+            if (bypassOn)
+            {
+                for (int sample = 0; sample < buffer.getNumSamples(); sample++)
+                    channelData[sample] *= inputGain;
+                continue;
+            }
+
             for (int sample = 0; sample < buffer.getNumSamples(); sample++) {
 
-                float input = channelData[sample] * inputGainLinear;
+                float input = channelData[sample] * inputGain;
 
                 float low = mLowBandLP[channel].process(input);
                 float lowMid = mLowMidBandLP[channel].process(mLowMidBandHP[channel].process(input));
                 float highMid = mHighMidBandLP[channel].process(mHighMidBandHP[channel].process(input));
                 float high = mHighBandHP[channel].process(input);
 
-                low *= band1DriveLinear;
+                low *= band1Drive;
                 low = lowBandDistortion.processSample(low);
-                lowMid *= band2DriveLinear;
+                lowMid *= band2Drive;
                 lowMid = lowMidBandDistortion.processSample(lowMid);
-                highMid *= band3DriveLinear;
+                highMid *= band3Drive;
                 highMid = highMidBandDistortion.processSample(highMid);
-                high *= band4DriveLinear;
+                high *= band4Drive;
                 high = highBandDistortion.processSample(high);
 
-                channelData[sample] = (low + lowMid + highMid + high) * outputGainLinear;
+                //if (mute[0] || (anySolo && !solo[0])) low = 0.0f;
+                //if (mute[1] || (anySolo && !solo[1])) lowMid = 0.0f;
+                //if (mute[2] || (anySolo && !solo[2])) highMid = 0.0f;
+                //if (mute[3] || (anySolo && !solo[3])) high = 0.0f;
+
+                float wet = (low + lowMid + highMid + high) * outputGain;
+                channelData[sample] = input * (1.0f - masterMix) + wet * masterMix;
 
             }
         }

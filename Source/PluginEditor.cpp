@@ -17,7 +17,7 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionA
     // editor's size to whatever you need it to be.
     audioProcessor.oscBuffer.resize(int(audioProcessor.getSampleRate() * 0.1));
 
-    //add sliders
+    //band drive sliders
     addSliderRotary(band1Drive);
     addSliderRotary(band2Drive);
     addSliderRotary(band3Drive);
@@ -38,7 +38,19 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionA
     band4TypeAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.parameters, "band4type", band4Selector);
 
     addAndMakeVisible(oscilloscope);
-    setSize(800, 600);
+
+    //global controls
+    addSliderRotary(inputGainSlider);
+    addSliderRotary(outputGainSlider);
+    addSliderRotary(masterMixSlider);
+    addAndMakeVisible(bypassButton);
+
+    //slider crossovver
+    addSliderRotary(crossover1Slider);
+    addSliderRotary(crossover2Slider);
+    addSliderRotary(crossover3Slider);
+
+    setSize(1000, 700);
 
     startTimerHz(60);
 
@@ -84,20 +96,25 @@ void MBDistortionAudioProcessorEditor::paint(juce::Graphics& g)
 
 void MBDistortionAudioProcessorEditor::resized()
 {
-    auto area = getLocalBounds().reduced(10);
-    int H = area.getHeight();
+    auto bounds = getLocalBounds().reduced(10);
+    int height = bounds.getHeight();
 
-    //oscilloscope
-    int topH = int(H * 0.25f);
-    auto scopeArea = area.removeFromTop(topH);
-    oscilloscope.setBounds(scopeArea);
-
-    //remaining 'area' used for mid & bottom controls
+    //osc
+    int topH = int(height * 0.25f);
+    auto oscArea = bounds.removeFromTop(topH);
+    oscilloscope.setBounds(oscArea);
 }
 
 void MBDistortionAudioProcessorEditor::addSliderRotary(juce::Slider& slider) {
     slider.setSliderStyle(juce::Slider::Rotary);
     slider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 50, 20);
+    slider.setNumDecimalPlacesToDisplay(2);
+    addAndMakeVisible(&slider);
+}
+
+void MBDistortionAudioProcessorEditor::addSliderVertical(juce::Slider& slider) {
+    slider.setSliderStyle(juce::Slider::LinearVertical);
+    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, true, 60, 20);
     slider.setNumDecimalPlacesToDisplay(2);
     addAndMakeVisible(&slider);
 }

@@ -25,7 +25,9 @@ public:
     //==============================================================================
     void paint (juce::Graphics&) override;
     void resized() override;
+
     void addSliderRotary(juce::Slider& slider);
+    void addSliderVertical(juce::Slider& slider);
     void addComboBox(juce::ComboBox& comboBox);
 
 private:
@@ -37,10 +39,7 @@ private:
     OscilloscopeComponent oscilloscope;
 
     //band sliders 'drive'
-    juce::Slider band1Drive;
-    juce::Slider band2Drive;
-    juce::Slider band3Drive;
-    juce::Slider band4Drive;
+    juce::Slider band1Drive, band2Drive, band3Drive, band4Drive;
 
     //band sliders attachmnents
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
@@ -58,6 +57,23 @@ private:
     std::unique_ptr<ComboBoxAttachment> band2TypeAttachment;
     std::unique_ptr<ComboBoxAttachment> band3TypeAttachment;
     std::unique_ptr<ComboBoxAttachment> band4TypeAttachment;
+
+    //other sliders and bypass etc
+    juce::Slider inputGainSlider, outputGainSlider, masterMixSlider;
+    juce::ToggleButton bypassButton;
+
+    SliderAttachment inputGainSliderAttachment{ audioProcessor.parameters, "inputGain", inputGainSlider };
+    SliderAttachment outputGainSliderAttachment{ audioProcessor.parameters, "outputGain", outputGainSlider };
+    SliderAttachment masterMixSliderAttachment{ audioProcessor.parameters, "masterMix", masterMixSlider };
+
+    using ButtonAttachment = juce::AudioProcessorValueTreeState::ButtonAttachment;
+    ButtonAttachment bypassButtonAttachment{ audioProcessor.parameters, "bypass", bypassButton };
+
+    //crossover sliders
+    juce::Slider crossover1Slider, crossover2Slider, crossover3Slider;
+    SliderAttachment crossover1Slider1Attachment{ audioProcessor.parameters, "crossoverFreq1", crossover1Slider };
+    SliderAttachment crossover2SliderAttachment{ audioProcessor.parameters, "crossoverFreq2", crossover2Slider };
+    SliderAttachment crossover3SliderAttachment{ audioProcessor.parameters, "crossoverFreq3", crossover3Slider };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MBDistortionAudioProcessorEditor)
 };

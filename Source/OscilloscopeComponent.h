@@ -22,6 +22,7 @@ public:
         : ringBuffer(bufferToUse)
     {
         displayBuffer.resize(ringBuffer.size());
+        startTimerHz(60);
     }
 
     void paint(juce::Graphics& g) override

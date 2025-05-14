@@ -15,6 +15,9 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionA
 {
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
+
+    setLookAndFeel(&customLookAndFeel);
+
     audioProcessor.oscBuffer.resize(int(audioProcessor.getSampleRate() * 0.1));
 
     //band drive sliders
@@ -90,198 +93,213 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionA
 
 MBDistortionAudioProcessorEditor::~MBDistortionAudioProcessorEditor()
 {
+    setLookAndFeel(nullptr);
 }
 
 //==============================================================================
 void MBDistortionAudioProcessorEditor::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colours::darkgrey);
-    g.setColour(juce::Colours::white);
+    //colours
+    auto baseColour = juce::Colour(0xff2e2e2e);
+    auto panelColour = juce::Colour(0xff323940);
+    auto bandColumnColour = juce::Colour(0xff323940);
 
-    auto area = getLocalBounds().reduced(10);
-    int height = area.getHeight();
+    //background
+    g.fillAll(baseColour);
 
-    //top rectangle (oscilloscope outline)
-    auto topHeight = int(height * 0.25);
-    auto scopeArea = area.removeFromTop(topHeight);
-    g.drawRect(scopeArea, 1);
-    oscilloscope.setBounds(scopeArea.reduced(5));
+    //padding, bounds, ara, etc
+    const int padding = 8;
+    auto bounds = getLocalBounds(); 
+    auto area = bounds.reduced(padding); 
+    auto initialArea = area;
 
-    //toplow
-    int topmidHeight = int(height * 0.1f);
-    auto crossovers = area.removeFromTop(topmidHeight);
-    g.drawRect(crossovers, 1);
+    int availableHeight = area.getHeight();
 
-    //middle
-    auto globalHeight = int(height * 0.15);
-    auto globalArea = area.removeFromTop(globalHeight);
-    g.drawRect(globalArea, 1);
+    //section background
 
-    //band settings (splitting it up I think)
-    auto totalBandHeight = int(height * 0.5);
-    auto bandWidth = getWidth() / 4;
-    auto bandArea = area.removeFromTop(totalBandHeight);
+    //oscilloscope 
+    auto topHeight = int(availableHeight * 0.25);
+    auto scopeSectionArea = area.removeFromTop(topHeight);
+    g.setColour(panelColour);
+    g.fillRect(scopeSectionArea);
 
-    auto band1Area = bandArea.removeFromLeft(bandWidth);
-    auto band2Area = bandArea.removeFromLeft(bandWidth);
-    auto band3Area = bandArea.removeFromLeft(bandWidth);
-    auto band4Area = bandArea.removeFromLeft(bandWidth);
-    g.drawRect(band1Area, 1);
-    g.drawRect(band2Area, 1);
-    g.drawRect(band3Area, 1);
-    g.drawRect(band4Area, 1);
+    //gap
+    area.removeFromTop(padding / 2);
 
-    //char curves
-    auto charCurve1 = band1Area.removeFromTop(totalBandHeight * 0.4);
-    g.drawRect(charCurve1, 1);
-    auto charCurve2 = band2Area.removeFromTop(totalBandHeight * 0.4);
-    g.drawRect(charCurve2, 1);
-    auto charCurve3 = band3Area.removeFromTop(totalBandHeight * 0.4);
-    g.drawRect(charCurve3, 1);
-    auto charCurve4 = band4Area.removeFromTop(totalBandHeight * 0.4);
-    g.drawRect(charCurve4, 1);
+    //crossovers
+    auto crossoverHeight = int(availableHeight * 0.1f);
+    auto crossoverSectionArea = area.removeFromTop(crossoverHeight);
+    g.setColour(panelColour);
+    g.fillRect(crossoverSectionArea);
 
-    //drive area
-    //drive knob (left), band volume (slider, left)
-    //mute / solo bottom
-    auto driveArea1 = band1Area.removeFromTop(totalBandHeight * 0.4);
-    g.drawRect(driveArea1, 1);
-    auto bandVolumeArea1 = driveArea1.removeFromLeft(bandWidth * 0.75);
-    g.drawRect(bandVolumeArea1, 1);
+    //gap
+    area.removeFromTop(padding / 2);
 
-    auto driveArea2 = band2Area.removeFromTop(totalBandHeight * 0.4);
-    g.drawRect(driveArea2, 1);
-    auto bandVolumeArea2 = driveArea2.removeFromLeft(bandWidth * 0.75);
-    g.drawRect(bandVolumeArea2, 1);
+    //global controls
+    auto globalHeight = int(availableHeight * 0.15);
+    auto globalSectionArea = area.removeFromTop(globalHeight);
+    g.setColour(panelColour);
+    g.fillRect(globalSectionArea);
 
-    auto driveArea3 = band3Area.removeFromTop(totalBandHeight * 0.4);
-    g.drawRect(driveArea3, 1);
-    auto bandVolumeArea3 = driveArea3.removeFromLeft(bandWidth * 0.75);
-    g.drawRect(bandVolumeArea3, 1);
+    //gap
+    area.removeFromTop(padding / 2);
 
-    auto driveArea4 = band4Area.removeFromTop(totalBandHeight * 0.4);
-    g.drawRect(driveArea4, 1);
-    auto bandVolumeArea4 = driveArea4.removeFromLeft(bandWidth * 0.75);
-    g.drawRect(bandVolumeArea4, 1);
+    //band area
+    auto bandSectionArea = area;
+    g.setColour(bandColumnColour);
+    g.fillRect(bandSectionArea);
 
-    //combo boxes
-    auto comboboxArea1 = band1Area.removeFromTop(totalBandHeight * 0.1);
-    g.drawRect(comboboxArea1, 1);
-    auto comboboxArea2 = band2Area.removeFromTop(totalBandHeight * 0.1);
-    g.drawRect(comboboxArea2, 1);
-    auto comboboxArea3 = band3Area.removeFromTop(totalBandHeight * 0.1);
-    g.drawRect(comboboxArea3, 1);
-    auto comboboxArea4 = band4Area.removeFromTop(totalBandHeight * 0.1);
-    g.drawRect(comboboxArea4, 1);
+    //characteristic curves
+    auto totalBandAreaHeight = int(initialArea.getHeight() * 0.5);
+    auto bandWidth = initialArea.getWidth() / 4;
 
-    //mute, solo
-    auto muteArea1 = band1Area.removeFromLeft(bandWidth / 2);
-    auto muteArea2 = band2Area.removeFromLeft(bandWidth / 2);
-    auto muteArea3 = band3Area.removeFromLeft(bandWidth / 2);
-    auto muteArea4 = band4Area.removeFromLeft(bandWidth / 2);
+    //parameters
+    float band1Drive = *audioProcessor.parameters.getRawParameterValue("band1drive");
+    float band1Level = *audioProcessor.parameters.getRawParameterValue("band1level");
+    float band1TypeFloat = *audioProcessor.parameters.getRawParameterValue("band1type");
 
+    float band2Drive = *audioProcessor.parameters.getRawParameterValue("band2drive");
+    float band2Level = *audioProcessor.parameters.getRawParameterValue("band2level");
+    float band2TypeFloat = *audioProcessor.parameters.getRawParameterValue("band2type");
+
+    float band3Drive = *audioProcessor.parameters.getRawParameterValue("band3drive");
+    float band3Level = *audioProcessor.parameters.getRawParameterValue("band3level");
+    float band3TypeFloat = *audioProcessor.parameters.getRawParameterValue("band3type");
+
+    float band4Drive = *audioProcessor.parameters.getRawParameterValue("band4drive");
+    float band4Level = *audioProcessor.parameters.getRawParameterValue("band4level");
+    float band4TypeFloat = *audioProcessor.parameters.getRawParameterValue("band4type");
+
+    int bandSectionY = bandSectionArea.getY();
+
+    auto charCurveHeight = int(totalBandAreaHeight * 0.4);
+    auto curvePadding = 4;
+
+    juce::Rectangle<int> charCurve1Bounds(bandSectionArea.getX(), bandSectionY, bandWidth, charCurveHeight);
+    juce::Rectangle<int> charCurve2Bounds(bandSectionArea.getX() + bandWidth, bandSectionY, bandWidth, charCurveHeight);
+    juce::Rectangle<int> charCurve3Bounds(bandSectionArea.getX() + bandWidth * 2, bandSectionY, bandWidth, charCurveHeight);
+    juce::Rectangle<int> charCurve4Bounds(bandSectionArea.getX() + bandWidth * 3, bandSectionY, bandWidth, charCurveHeight);
+
+    //draw curves
+    drawCharacteristicCurve(g, charCurve1Bounds.reduced(curvePadding), static_cast<DistortionTypes>(static_cast<int>(band1TypeFloat)), band1Drive, band1Level);
+    drawCharacteristicCurve(g, charCurve2Bounds.reduced(curvePadding), static_cast<DistortionTypes>(static_cast<int>(band2TypeFloat)), band2Drive, band2Level);
+    drawCharacteristicCurve(g, charCurve3Bounds.reduced(curvePadding), static_cast<DistortionTypes>(static_cast<int>(band3TypeFloat)), band3Drive, band3Level);
+    drawCharacteristicCurve(g, charCurve4Bounds.reduced(curvePadding), static_cast<DistortionTypes>(static_cast<int>(band4TypeFloat)), band4Drive, band4Level);
 
 }
 
 void MBDistortionAudioProcessorEditor::resized()
 {
-    auto area = getLocalBounds().reduced(10);
-    auto height = area.getHeight();
+    //main properties
+    const int padding = 8; 
+    auto bounds = getLocalBounds();
+    auto area = bounds.reduced(padding);
+    auto initialArea = area;
 
-    //top rectangle (oscilloscope)
-    auto topHeight = int(height * 0.25);
+    int availableHeight = area.getHeight();
+
+    //oscilloscope
+    auto topHeight = int(availableHeight * 0.25);
     auto scopeArea = area.removeFromTop(topHeight);
+    oscilloscope.setBounds(scopeArea.reduced(padding / 2));
 
-    //crossover sliders
-    auto crossoverHeight = int(height * 0.1);
+    //gap
+    area.removeFromTop(padding / 2);
+
+    //crossovers
+    auto crossoverHeight = int(availableHeight * 0.1);
     auto crossoverArea = area.removeFromTop(crossoverHeight);
-    crossover1Slider.setBounds(crossoverArea.removeFromLeft(getWidth()/3).reduced(5));
-    crossover2Slider.setBounds(crossoverArea.removeFromLeft(getWidth()/3).reduced(5));
-    crossover3Slider.setBounds(crossoverArea.removeFromLeft(getWidth()/3).reduced(5));
+    auto crossoverSliderWidth = crossoverArea.getWidth() / 3;
+    crossover1Slider.setBounds(crossoverArea.removeFromLeft(crossoverSliderWidth).reduced(padding / 2));
+    crossover2Slider.setBounds(crossoverArea.removeFromLeft(crossoverSliderWidth).reduced(padding / 2));
+    crossover3Slider.setBounds(crossoverArea.removeFromLeft(crossoverSliderWidth).reduced(padding / 2));
+
+    //gap
+    area.removeFromTop(padding / 2);
 
     //global controls
-    auto globalHeight = int(height * 0.15);
+    auto globalHeight = int(availableHeight * 0.15);
     auto globalArea = area.removeFromTop(globalHeight);
-    inputGainSlider.setBounds(globalArea.removeFromLeft(getWidth()/5).reduced(5));
-    masterMixSlider.setBounds(globalArea.removeFromLeft(getWidth()/5).reduced(5));
-    outputGainSlider.setBounds(globalArea.removeFromLeft(getWidth()/5).reduced(5));
-    bypassButton.setBounds(globalArea.removeFromLeft(getWidth()/5).reduced(5));
-    oversampleSelector.setBounds(globalArea.removeFromLeft(getWidth()/5).reduced(5));
+    auto globalCtrlWidth = globalArea.getWidth() / 5; // 5 global controls
+    inputGainSlider.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding / 2));
+    masterMixSlider.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding / 2));
+    outputGainSlider.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding / 2));
+    bypassButton.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding)); // Buttons might need more padding
+    oversampleSelector.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding / 2));
 
-    //ALL BAND SETTINGS
-    auto totalBandHeight = int(height * 0.5);
-    auto bandWidth = getWidth() / 4;
-    auto bandArea = area.removeFromTop(totalBandHeight);
+    //gap
+    area.removeFromTop(padding / 2);
 
-    auto band1Area = bandArea.removeFromLeft(bandWidth);
-    auto band2Area = bandArea.removeFromLeft(bandWidth);
-    auto band3Area = bandArea.removeFromLeft(bandWidth);
-    auto band4Area = bandArea.removeFromLeft(bandWidth);
+    //band settings
+    auto bandSectionArea = area; 
+    auto totalBandAreaHeight = bandSectionArea.getHeight();
+    auto bandWidth = bandSectionArea.getWidth() / 4;
 
-    //char curve
-    auto charCurve1 = band1Area.removeFromTop(totalBandHeight * 0.4);
-    auto charCurve2 = band2Area.removeFromTop(totalBandHeight * 0.4);
-    auto charCurve3 = band3Area.removeFromTop(totalBandHeight * 0.4);
-    auto charCurve4 = band4Area.removeFromTop(totalBandHeight * 0.4);
-    
-    //drive1
-    auto driveArea1 = band1Area.removeFromTop(totalBandHeight * 0.4);
-    band1Drive.setBounds(driveArea1.removeFromLeft(bandWidth * 0.75).reduced(5));
-    //level1
-    auto bandVolumeArea1 = driveArea1.removeFromLeft(bandWidth * 0.4);
-    band1Level.setBounds(bandVolumeArea1.reduced(5));
+    //columns
+    auto band1ColArea = bandSectionArea.removeFromLeft(bandWidth);
+    auto band2ColArea = bandSectionArea.removeFromLeft(bandWidth);
+    auto band3ColArea = bandSectionArea.removeFromLeft(bandWidth);
+    auto band4ColArea = bandSectionArea; 
 
-    //drive2
-    auto driveArea2 = band2Area.removeFromTop(totalBandHeight * 0.4);
-    band2Drive.setBounds(driveArea2.removeFromLeft(bandWidth * 0.75).reduced(5));
-    //level2
-    auto bandVolumeArea2 = driveArea2.removeFromLeft(bandWidth * 0.4);
-    band2Level.setBounds(bandVolumeArea2.reduced(5));
+    auto band1CtrlArea = band1ColArea;
+    auto band2CtrlArea = band2ColArea;
+    auto band3CtrlArea = band3ColArea;
+    auto band4CtrlArea = band4ColArea;
 
-    //drive3
-    auto driveArea3 = band3Area.removeFromTop(totalBandHeight * 0.4);
-    band3Drive.setBounds(driveArea3.removeFromLeft(bandWidth * 0.75).reduced(5));
-    //level3
-    auto bandVolumeArea3 = driveArea3.removeFromLeft(bandWidth * 0.4);
-    band3Level.setBounds(bandVolumeArea3.reduced(5));
+    //skip char curves (handled in painting)
+    auto charCurveHeight = int(totalBandAreaHeight * 0.4);
+    band1CtrlArea.removeFromTop(charCurveHeight);
+    band2CtrlArea.removeFromTop(charCurveHeight);
+    band3CtrlArea.removeFromTop(charCurveHeight);
+    band4CtrlArea.removeFromTop(charCurveHeight);
 
-    //drive4
-    auto driveArea4 = band4Area.removeFromTop(totalBandHeight * 0.4);
-    band4Drive.setBounds(driveArea4.removeFromLeft(bandWidth * 0.75).reduced(5));
-    //level4
-    auto bandVolumeArea4 = driveArea4.removeFromLeft(bandWidth * 0.4);
-    band4Level.setBounds(bandVolumeArea4.reduced(5));
+    //drive & level
+    auto driveLevelHeight = int(totalBandAreaHeight * 0.4);
+    auto driveWidthRatio = 0.6; 
+    auto levelWidthRatio = 1.0 - driveWidthRatio;
 
-    //combo boxes
-    auto comboboxArea1 = band1Area.removeFromTop(totalBandHeight * 0.1);
-    band1Selector.setBounds(comboboxArea1.reduced(5));
-    auto comboboxArea2 = band2Area.removeFromTop(totalBandHeight * 0.1);
-    band2Selector.setBounds(comboboxArea2.reduced(5));
-    auto comboboxArea3 = band3Area.removeFromTop(totalBandHeight * 0.1);
-    band3Selector.setBounds(comboboxArea3.reduced(5));
-    auto comboboxArea4 = band4Area.removeFromTop(totalBandHeight * 0.1);
-    band4Selector.setBounds(comboboxArea4.reduced(5));
+    auto driveArea1 = band1CtrlArea.removeFromTop(driveLevelHeight);
+    band1Drive.setBounds(driveArea1.removeFromLeft(bandWidth * driveWidthRatio).reduced(padding / 2));
+    band1Level.setBounds(driveArea1.reduced(padding / 2)); // Takes remaining width
 
-    //mute, solo
-    auto muteArea1 = band1Area.removeFromLeft(bandWidth / 2);
-    auto soloArea1 = band1Area.removeFromLeft(bandWidth / 2);
-    band1MuteButton.setBounds(muteArea1.reduced(5));
-    band1SoloButton.setBounds(soloArea1.reduced(5));
+    auto driveArea2 = band2CtrlArea.removeFromTop(driveLevelHeight);
+    band2Drive.setBounds(driveArea2.removeFromLeft(bandWidth * driveWidthRatio).reduced(padding / 2));
+    band2Level.setBounds(driveArea2.reduced(padding / 2));
 
-    auto muteArea2 = band2Area.removeFromLeft(bandWidth / 2);
-    auto soloArea2 = band2Area.removeFromLeft(bandWidth / 2);
-    band2MuteButton.setBounds(muteArea2.reduced(5));
-    band2SoloButton.setBounds(soloArea2.reduced(5));
+    auto driveArea3 = band3CtrlArea.removeFromTop(driveLevelHeight);
+    band3Drive.setBounds(driveArea3.removeFromLeft(bandWidth * driveWidthRatio).reduced(padding / 2));
+    band3Level.setBounds(driveArea3.reduced(padding / 2));
 
-    auto muteArea3 = band3Area.removeFromLeft(bandWidth / 2);
-    auto soloArea3 = band3Area.removeFromLeft(bandWidth / 2);
-    band3MuteButton.setBounds(muteArea3.reduced(5));
-    band3SoloButton.setBounds(soloArea3.reduced(5));
+    auto driveArea4 = band4CtrlArea.removeFromTop(driveLevelHeight);
+    band4Drive.setBounds(driveArea4.removeFromLeft(bandWidth * driveWidthRatio).reduced(padding / 2));
+    band4Level.setBounds(driveArea4.reduced(padding / 2));
 
-    auto muteArea4 = band4Area.removeFromLeft(bandWidth / 2);
-    auto soloArea4 = band4Area.removeFromLeft(bandWidth / 2);
-    band4MuteButton.setBounds(muteArea4.reduced(5));
-    band4SoloButton.setBounds(soloArea4.reduced(5));
+    //distortion types
+    auto comboBoxHeight = int(totalBandAreaHeight * 0.1);
+    band1Selector.setBounds(band1CtrlArea.removeFromTop(comboBoxHeight).reduced(padding / 2));
+    band2Selector.setBounds(band2CtrlArea.removeFromTop(comboBoxHeight).reduced(padding / 2));
+    band3Selector.setBounds(band3CtrlArea.removeFromTop(comboBoxHeight).reduced(padding / 2));
+    band4Selector.setBounds(band4CtrlArea.removeFromTop(comboBoxHeight).reduced(padding / 2));
+
+
+    //mute/Solo buttons
+    auto muteSoloArea1 = band1CtrlArea;
+    auto muteSoloWidth = muteSoloArea1.getWidth() / 2;
+    band1MuteButton.setBounds(muteSoloArea1.removeFromLeft(muteSoloWidth).reduced(padding));
+    band1SoloButton.setBounds(muteSoloArea1.reduced(padding));
+
+    auto muteSoloArea2 = band2CtrlArea;
+    band2MuteButton.setBounds(muteSoloArea2.removeFromLeft(muteSoloWidth).reduced(padding));
+    band2SoloButton.setBounds(muteSoloArea2.reduced(padding));
+
+    auto muteSoloArea3 = band3CtrlArea;
+    band3MuteButton.setBounds(muteSoloArea3.removeFromLeft(muteSoloWidth).reduced(padding));
+    band3SoloButton.setBounds(muteSoloArea3.reduced(padding));
+
+    auto muteSoloArea4 = band4CtrlArea;
+    band4MuteButton.setBounds(muteSoloArea4.removeFromLeft(muteSoloWidth).reduced(padding));
+    band4SoloButton.setBounds(muteSoloArea4.reduced(padding));
+
 }
 
 void MBDistortionAudioProcessorEditor::addSliderRotary(juce::Slider& slider) {
@@ -333,4 +351,93 @@ void MBDistortionAudioProcessorEditor::addFactorComboBox(juce::ComboBox& comboBo
 
 void MBDistortionAudioProcessorEditor::timerCallback() {
     repaint();
+}
+
+void MBDistortionAudioProcessorEditor::drawCharacteristicCurve(juce::Graphics& g, juce::Rectangle<int> bounds,
+    DistortionTypes type, float drive, float level) {
+    
+    //style stuff
+    auto curveBgColour = juce::Colour(0xff323940);
+    auto axisColour = juce::Colour(0xffe6d9c5).withAlpha(0.6f);
+    auto curveColour = juce::Colour(0xff82585b);
+
+    //set background
+    g.setColour(curveBgColour);
+    g.fillRect(bounds);
+    
+    //convert to gain
+    float driveGain = pow(10, drive / 20.0f);
+    float levelGain = pow(10, level / 20.0f);
+
+    //temp processors
+    DistortionProcessor tempDistortion;
+    tempDistortion.setDistortionType(type);
+
+    const float inputMin = -1.0f;
+    const float inputMax = 1.0f;
+    const float displayOutputMin = -1.2f;
+    const float displayOutputMax = 1.2f;
+
+    //x axis
+    float yZero = juce::jmap(0.0f, displayOutputMin, displayOutputMax, (float)bounds.getBottom(), (float)bounds.getY());
+    yZero = juce::jlimit((float)bounds.getY(), (float)bounds.getBottom(), yZero); 
+    g.setColour(axisColour);
+    g.drawLine((float)bounds.getX(), yZero, (float)bounds.getRight(), yZero);
+
+    //y axis
+    float xZero = juce::jmap(0.0f, inputMin, inputMax, (float)bounds.getX(), (float)bounds.getRight());
+    xZero = juce::jlimit((float)bounds.getX(), (float)bounds.getRight(), xZero);
+    g.drawLine(xZero, (float)bounds.getY(), xZero, (float)bounds.getBottom(), 0.8f); 
+
+    juce::Path path;
+    const int numPoints = bounds.getWidth(); 
+    bool firstPoint = true;
+
+    for (int i = 0; i < numPoints; ++i)
+    {
+        float currentInput = juce::jmap((float)i, 0.0f, (float)(numPoints - 1), inputMin, inputMax);
+
+        float drivenInput = currentInput * driveGain;
+
+        float processedSample = tempDistortion.processSample(drivenInput);
+
+        processedSample *= levelGain;
+
+        float x = juce::jmap(currentInput, inputMin, inputMax,
+            (float)bounds.getX(), (float)bounds.getRight());
+        float y = juce::jmap(processedSample, displayOutputMin, displayOutputMax,
+            (float)bounds.getBottom(), (float)bounds.getY());
+
+        y = juce::jlimit((float)bounds.getY(), (float)bounds.getBottom(), y);
+
+        if (firstPoint) {
+            path.startNewSubPath(x, y);
+            firstPoint = false;
+        }
+        else {
+            path.lineTo(x, y);
+        }
+    }
+
+    g.setColour(curveColour);
+    g.strokePath(path, juce::PathStrokeType(1.8f)); 
+
+}
+
+CustomLookAndFeel::CustomLookAndFeel() {
+    //things for sliders
+    //other bits
+    //using https://pigmentsapp.com/generator to get argb values
+
+    auto sliderThumbColour = juce::Colour(0xffb0928b);
+    auto sliderTrackColour = juce::Colour(0xffc77373);
+    setColour(juce::Slider::thumbColourId, sliderThumbColour);
+    setColour(juce::Slider::trackColourId, sliderTrackColour);
+
+    auto rotarySliderFillColour = juce::Colour(0xffc77373);
+    setColour(juce::Slider::rotarySliderFillColourId, rotarySliderFillColour);
+
+    setColour(juce::ComboBox::backgroundColourId, juce::Colour(0xff323940));
+    setColour(juce::ComboBox::arrowColourId, juce::Colour(0xff82585b));
+
 }

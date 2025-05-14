@@ -11,6 +11,7 @@
 #include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include "OscilloscopeComponent.h"
+#include "CustomLookAndFeel.h"
 
 //==============================================================================
 /**
@@ -100,6 +101,13 @@ private:
     //oversample selector
     juce::ComboBox oversampleSelector;
     std::unique_ptr<ComboBoxAttachment> oversampleSelectorAttachment;
+
+    //characteristic curve dispaly
+    void drawCharacteristicCurve(juce::Graphics& g, juce::Rectangle<int> bounds,
+        DistortionTypes type, float drive, float level);
+
+    //custom look and feel
+    CustomLookAndFeel customLookAndFeel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MBDistortionAudioProcessorEditor)
 };

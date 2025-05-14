@@ -27,8 +27,8 @@ public:
 
     void paint(juce::Graphics& g) override
     {
-        g.fillAll(juce::Colours::darkgrey);
-        g.setColour(juce::Colours::white);
+        g.fillAll(juce::Colour(0xff323940));
+        g.setColour(juce::Colour(0xff82585b));
         int height = getBounds().getHeight();
         int midHeight = height / 2;
         int scale = 90;

@@ -98,15 +98,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout MBDistortionAudioProcessor::
         //filter crossover controls
         std::make_unique<juce::AudioParameterFloat>( 
             juce::ParameterID("crossoverFreq1", 1), "Crossover 1 Frequency",
-            juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.25f),
+            juce::NormalisableRange<float>(100.0f, 500.0f, 1.0f, 0.25f),
             200.0f, "Hz"),
         std::make_unique<juce::AudioParameterFloat>( 
             juce::ParameterID("crossoverFreq2", 1), "Crossover 2 Frequency",
-            juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.25f),
+            juce::NormalisableRange<float>(400.0f, 2500.0f, 1.0f, 0.25f),
             1000.0f, "Hz"),
         std::make_unique<juce::AudioParameterFloat>( 
             juce::ParameterID("crossoverFreq3", 1), "Crossover 3 Frequency",
-            juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.25f),
+            juce::NormalisableRange<float>(2000.0f, 10000.0f, 1.0f, 0.25f),
             5000.0f, "Hz"),
 
         //oversampling options
@@ -217,6 +217,25 @@ void MBDistortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     //sample rate
     mHostSampleRate = sampleRate;
 
+    //inital crossoverfreqs
+    float targetFreq1 = *parameters.getRawParameterValue("crossoverFreq1");
+    float targetFreq2 = *parameters.getRawParameterValue("crossoverFreq2");
+    float targetFreq3 = *parameters.getRawParameterValue("crossoverFreq3");
+
+    //enforce min separation
+    //no lower than 20hz
+    targetFreq1 = std::max(20.0f, targetFreq1);
+    targetFreq2 = std::max(targetFreq1 + minCrossoverFreq, targetFreq2);
+    targetFreq3 = std::max(targetFreq2 + minCrossoverFreq, targetFreq3);
+    //ensure below nyquist
+    targetFreq3 = std::min(targetFreq3, float(sampleRate / 2.0f * 0.95));
+    targetFreq2 = std::min(targetFreq2, targetFreq3 - minCrossoverFreq);
+    targetFreq1 = std::min(targetFreq1, targetFreq2 - minCrossoverFreq);
+
+    lastCrossoverFreq1 = targetFreq1;
+    lastCrossoverFreq2 = targetFreq2;
+    lastCrossoverFreq3 = targetFreq3;
+
     //effective sample rate
     double effectiveSampleRate = getEffectiveSampleRate();
 
@@ -250,28 +269,30 @@ void MBDistortionAudioProcessor::prepareToPlay (double sampleRate, int samplesPe
     mHighMidBandLP.resize(numChannels);
     mHighBandHP.resize(numChannels);
 
-    //initalise filters
-    for (int channel = 0; channel < numChannels; channel++) {
+    for (int channel = 0; channel < numChannels; ++channel) {
+  
         mLowBandLP[channel].setSampleRate(effectiveSampleRate);
         mLowMidBandHP[channel].setSampleRate(effectiveSampleRate);
         mLowMidBandLP[channel].setSampleRate(effectiveSampleRate);
         mHighMidBandHP[channel].setSampleRate(effectiveSampleRate);
         mHighMidBandLP[channel].setSampleRate(effectiveSampleRate);
         mHighBandHP[channel].setSampleRate(effectiveSampleRate);
-    }
 
-    //temp setting cuttoff frequencies
-    for (int channel = 0; channel < numChannels; channel++)
-    {
-        //1st crossover
-        mLowBandLP[channel].setCutoff(crossoverFreq1);
-        mLowMidBandHP[channel].setCutoff(crossoverFreq1);
-        //2nd crossover
-        mLowMidBandLP[channel].setCutoff(crossoverFreq2);
-        mHighMidBandHP[channel].setCutoff(crossoverFreq2);
-        //3rd crossover
-        mHighMidBandLP[channel].setCutoff(crossoverFreq3);
-        mHighBandHP[channel].setCutoff(crossoverFreq3);
+        mLowBandLP[channel].setCutoff(lastCrossoverFreq1);
+        mLowMidBandHP[channel].setCutoff(lastCrossoverFreq1);
+
+        mLowMidBandLP[channel].setCutoff(lastCrossoverFreq2);
+        mHighMidBandHP[channel].setCutoff(lastCrossoverFreq2);
+
+        mHighMidBandLP[channel].setCutoff(lastCrossoverFreq3);
+        mHighBandHP[channel].setCutoff(lastCrossoverFreq3);
+
+        mLowBandLP[channel].reset();
+        mLowMidBandHP[channel].reset();
+        mLowMidBandLP[channel].reset();
+        mHighMidBandHP[channel].reset();
+        mHighMidBandLP[channel].reset();
+        mHighBandHP[channel].reset();
     }
 
     //osc vis
@@ -330,6 +351,33 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
     //clear other outputs
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
+
+    float targetFreq1 = *parameters.getRawParameterValue("crossoverFreq1");
+    float targetFreq2 = *parameters.getRawParameterValue("crossoverFreq2");
+    float targetFreq3 = *parameters.getRawParameterValue("crossoverFreq3");
+    double effectiveSampleRate = getEffectiveSampleRate();
+
+    //enforce order & nyquist
+    targetFreq1 = std::clamp(targetFreq1, 20.0f, (float)(effectiveSampleRate / 2.0 * 0.95));
+    targetFreq2 = std::clamp(targetFreq2, targetFreq1 + minCrossoverFreq, (float)(effectiveSampleRate / 2.0 * 0.95));
+    targetFreq3 = std::clamp(targetFreq3, targetFreq2 + minCrossoverFreq, (float)(effectiveSampleRate / 2.0 * 0.95));
+    
+    if (targetFreq1 != lastCrossoverFreq1 || targetFreq2 != lastCrossoverFreq2 || targetFreq3 != lastCrossoverFreq3) {
+        for (int channel = 0; channel < totalNumInputChannels; ++channel) {
+            mLowBandLP[channel].setCutoff(targetFreq1);
+            mLowMidBandHP[channel].setCutoff(targetFreq1);
+
+            mLowMidBandLP[channel].setCutoff(targetFreq2);
+            mHighMidBandHP[channel].setCutoff(targetFreq2);
+
+            mHighMidBandLP[channel].setCutoff(targetFreq3);
+            mHighBandHP[channel].setCutoff(targetFreq3);
+        }
+
+        lastCrossoverFreq1 = targetFreq1;
+        lastCrossoverFreq2 = targetFreq2;
+        lastCrossoverFreq3 = targetFreq3;
+    }
 
     float band1Drive = pow(10, *parameters.getRawParameterValue("band1drive") / 20.0f);
     float band2Drive = pow(10, *parameters.getRawParameterValue("band2drive") / 20.0f);

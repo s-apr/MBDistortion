@@ -4,6 +4,8 @@
               addUsingNamespaceToJuceHeader="0" jucerFormatVersion="1">
   <MAINGROUP id="sNHcoO" name="MBDistortion">
     <GROUP id="{10CE9FB3-1B48-B0E0-6DF2-55CE81ABD83D}" name="Source">
+      <FILE id="NrA6xY" name="CustomLookAndFeel.h" compile="0" resource="0"
+            file="Source/CustomLookAndFeel.h"/>
       <FILE id="vnh4kV" name="OscilloscopeComponent.h" compile="0" resource="0"
             file="Source/OscilloscopeComponent.h"/>
       <FILE id="kD4S2M" name="DistortionProcessor.cpp" compile="1" resource="0"

@@ -102,10 +102,18 @@ private:
     //high band
     std::vector<LinkwitzRileyHighPass> mHighBandHP;
 
-    //store temp crossover freqs
+    //crossover freq
+    //and prev crossover freq
     float crossoverFreq1 = 200.0f;
     float crossoverFreq2 = 1000.0f;
     float crossoverFreq3 = 5000.0f;
+
+    //start with invalid range
+    float lastCrossoverFreq1 = -1.0f;
+    float lastCrossoverFreq2 = -1.0f;
+    float lastCrossoverFreq3 = -1.0f;
+    //ensure minimum distance between crossovers
+    const float minCrossoverFreq = 10.0f;
 
     //distortion processor
     DistortionProcessor lowBandDistortion;
@@ -115,7 +123,7 @@ private:
 
     //oversampling (to avoid aliasing) global oversample
     std::vector<std::unique_ptr<juce::dsp::Oversampling<float>>> mOversample;
-    float mHostSampleRate = 44100;
+    double mHostSampleRate = 44100;
     int mCurrentOversamplingFactor = 1; //1 = "Off"
     bool mOversamplingUpdate = true;
     

@@ -38,7 +38,7 @@ float DistortionProcessor::processSample(float input) {
 
 //DAFx distortion algorithms
 float DistortionProcessor::hardClip(float input) {
-    const float threshold = 0.5f;
+    const float threshold = 1.0f;
     return std::clamp(input, -threshold, threshold);
 }
 

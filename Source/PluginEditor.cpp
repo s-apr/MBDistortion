@@ -22,9 +22,24 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionA
 
     //band drive sliders
     addSliderRotary(band1Drive);
+    band1DriveLabel.setText("Drive", juce::dontSendNotification);
+    band1DriveLabel.attachToComponent(&band1Drive, false);
+    band1DriveLabel.setJustificationType(juce::Justification::centred);
+
     addSliderRotary(band2Drive);
+    band2DriveLabel.setText("Drive", juce::dontSendNotification);
+    band2DriveLabel.attachToComponent(&band2Drive, false);
+    band2DriveLabel.setJustificationType(juce::Justification::centred);
+
     addSliderRotary(band3Drive);
+    band3DriveLabel.setText("Drive", juce::dontSendNotification);
+    band3DriveLabel.attachToComponent(&band3Drive, false);
+    band3DriveLabel.setJustificationType(juce::Justification::centred);
+   
     addSliderRotary(band4Drive);
+    band4DriveLabel.setText("Drive", juce::dontSendNotification);
+    band4DriveLabel.attachToComponent(&band4Drive, false);
+    band4DriveLabel.setJustificationType(juce::Justification::centred);
 
     //add comboboxes
     addTypeComboBox(band1Selector);
@@ -45,25 +60,71 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionA
 
     //oversample
     oversampleSelectorAttachment = std::make_unique<ComboBoxAttachment>(audioProcessor.parameters, "oversamplingFactor", oversampleSelector);
+    oversampleSelector.setJustificationType(juce::Justification::centred);
+    oversampleSelector.setText("Oversampling", juce::dontSendNotification);
 
     addAndMakeVisible(oscilloscope);
 
     //global controls
     addSliderRotary(inputGainSlider);
+    inputGainLabel.setText("Input Gain", juce::dontSendNotification);
+    inputGainLabel.attachToComponent(&inputGainSlider, false);
+    inputGainLabel.setJustificationType(juce::Justification::centred);
+
     addSliderRotary(outputGainSlider);
+    outputGainLabel.setText("Output Gain", juce::dontSendNotification);
+    outputGainLabel.attachToComponent(&outputGainSlider, false);
+    outputGainLabel.setJustificationType(juce::Justification::centred);
+
     addSliderRotary(masterMixSlider);
+    masterMixLabel.setText("Master Mix", juce::dontSendNotification);
+    masterMixLabel.attachToComponent(&masterMixSlider, false);
+    masterMixLabel.setJustificationType(juce::Justification::centred);
+
     addAndMakeVisible(bypassButton);
+    bypassButton.setButtonText("Bypass");
 
     //slider crossovver
     addSliderHorizontal(crossover1Slider);
+    crossover1Slider.setTextValueSuffix(" Hz");
+    crossover1Label.setText("Crossover 1", juce::dontSendNotification);
+    crossover1Label.attachToComponent(&crossover1Slider, false);
+    crossover1Label.setJustificationType(juce::Justification::centred);
+
     addSliderHorizontal(crossover2Slider);
+    crossover2Slider.setTextValueSuffix(" Hz");
+    crossover2Label.setText("Crossover 2", juce::dontSendNotification);
+    crossover2Label.attachToComponent(&crossover2Slider, false);
+    crossover2Label.setJustificationType(juce::Justification::centred);
+
+
     addSliderHorizontal(crossover3Slider);
+    crossover3Slider.setTextValueSuffix(" Hz");
+    crossover3Label.setText("Crossover 3", juce::dontSendNotification);
+    crossover3Label.attachToComponent(&crossover3Slider, false);
+    crossover3Label.setJustificationType(juce::Justification::centred);
+
 
     //band level
     addSliderVertical(band1Level);
+    band1LevelLabel.setText("Level", juce::dontSendNotification);
+    band1LevelLabel.attachToComponent(&band1Level, false);
+    band1LevelLabel.setJustificationType(juce::Justification::centred);
+
     addSliderVertical(band2Level);
+    band2LevelLabel.setText("Level", juce::dontSendNotification);
+    band2LevelLabel.attachToComponent(&band2Level, false);
+    band2LevelLabel.setJustificationType(juce::Justification::centred);
+
     addSliderVertical(band3Level);
+    band3LevelLabel.setText("Level", juce::dontSendNotification);
+    band3LevelLabel.attachToComponent(&band3Level, false);
+    band3LevelLabel.setJustificationType(juce::Justification::centred);
+
     addSliderVertical(band4Level);
+    band4LevelLabel.setText("Level", juce::dontSendNotification);
+    band4LevelLabel.attachToComponent(&band4Level, false);
+    band4LevelLabel.setJustificationType(juce::Justification::centred);
 
     //mute
     addAndMakeVisible(band1MuteButton);
@@ -84,6 +145,15 @@ MBDistortionAudioProcessorEditor::MBDistortionAudioProcessorEditor(MBDistortionA
     band2SoloButton.setButtonText("Solo");
     band3SoloButton.setButtonText("Solo");
     band4SoloButton.setButtonText("Solo");
+
+    //had to put these down here
+    //wouldn't set text otherwise
+    //something to do with how combo boxes are populated
+    //idk
+    band1Selector.setText("Distortion Type", juce::dontSendNotification);
+    band2Selector.setText("Distortion Type", juce::dontSendNotification);
+    band3Selector.setText("Distortion Type", juce::dontSendNotification);
+    band4Selector.setText("Distortion Type", juce::dontSendNotification);
 
     setSize(1000, 800);
 
@@ -195,6 +265,7 @@ void MBDistortionAudioProcessorEditor::resized()
     auto bounds = getLocalBounds();
     auto area = bounds.reduced(padding);
     auto initialArea = area;
+    int bandLabelHeight = 20;
 
     int availableHeight = area.getHeight();
 
@@ -210,9 +281,18 @@ void MBDistortionAudioProcessorEditor::resized()
     auto crossoverHeight = int(availableHeight * 0.1);
     auto crossoverArea = area.removeFromTop(crossoverHeight);
     auto crossoverSliderWidth = crossoverArea.getWidth() / 3;
-    crossover1Slider.setBounds(crossoverArea.removeFromLeft(crossoverSliderWidth).reduced(padding / 2));
-    crossover2Slider.setBounds(crossoverArea.removeFromLeft(crossoverSliderWidth).reduced(padding / 2));
-    crossover3Slider.setBounds(crossoverArea.removeFromLeft(crossoverSliderWidth).reduced(padding / 2));
+
+    auto crossover1Area = crossoverArea.removeFromLeft(crossoverSliderWidth);
+    crossover1Label.setBounds(crossover1Area.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    crossover1Slider.setBounds(crossover1Area.reduced(padding / 2));
+
+    auto crossover2Area = crossoverArea.removeFromLeft(crossoverSliderWidth);
+    crossover2Label.setBounds(crossover2Area.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    crossover2Slider.setBounds(crossover2Area.reduced(padding / 2));
+
+    auto crossover3Area = crossoverArea;
+    crossover3Label.setBounds(crossover3Area.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    crossover3Slider.setBounds(crossover3Area.reduced(padding / 2));
 
     //gap
     area.removeFromTop(padding / 2);
@@ -220,12 +300,26 @@ void MBDistortionAudioProcessorEditor::resized()
     //global controls
     auto globalHeight = int(availableHeight * 0.15);
     auto globalArea = area.removeFromTop(globalHeight);
-    auto globalCtrlWidth = globalArea.getWidth() / 5; // 5 global controls
-    inputGainSlider.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding / 2));
-    masterMixSlider.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding / 2));
-    outputGainSlider.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding / 2));
-    bypassButton.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding)); // Buttons might need more padding
-    oversampleSelector.setBounds(globalArea.removeFromLeft(globalCtrlWidth).reduced(padding / 2));
+    auto globalCtrlWidth = globalArea.getWidth() / 5; //5 global controls
+
+    auto inputGainArea = globalArea.removeFromLeft(globalCtrlWidth);
+    inputGainLabel.setBounds(inputGainArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    inputGainSlider.setBounds(inputGainArea.reduced(padding / 2));
+
+    auto masterMixArea = globalArea.removeFromLeft(globalCtrlWidth);
+    masterMixLabel.setBounds(masterMixArea.removeFromTop(bandLabelHeight).reduced(padding / 2)); 
+    masterMixSlider.setBounds(masterMixArea.reduced(padding / 2));
+
+    auto outputGainArea = globalArea.removeFromLeft(globalCtrlWidth);
+    outputGainLabel.setBounds(outputGainArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    outputGainSlider.setBounds(outputGainArea.reduced(padding / 2));
+
+    auto bypassArea = globalArea.removeFromLeft(globalCtrlWidth);
+    bypassLabel.setBounds(bypassArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    bypassButton.setBounds(bypassArea.reduced(padding / 2));
+
+    auto oversampleArea = globalArea;
+    oversampleSelector.setBounds(oversampleArea.reduced(padding / 2));
 
     //gap
     area.removeFromTop(padding / 2);
@@ -258,29 +352,46 @@ void MBDistortionAudioProcessorEditor::resized()
     auto driveWidthRatio = 0.6; 
     auto levelWidthRatio = 1.0 - driveWidthRatio;
 
-    auto driveArea1 = band1CtrlArea.removeFromTop(driveLevelHeight);
-    band1Drive.setBounds(driveArea1.removeFromLeft(bandWidth * driveWidthRatio).reduced(padding / 2));
-    band1Level.setBounds(driveArea1.reduced(padding / 2)); // Takes remaining width
+    //band1
+    auto band1DriveLevelArea = band1CtrlArea.removeFromTop(driveLevelHeight);
+    auto band1DriveArea = band1DriveLevelArea.removeFromLeft(bandWidth * driveWidthRatio); 
+    auto band1LevelArea = band1DriveLevelArea; 
+    band1DriveLabel.setBounds(band1DriveArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    band1Drive.setBounds(band1DriveArea.reduced(padding / 2)); 
+    band1LevelLabel.setBounds(band1LevelArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    band1Level.setBounds(band1LevelArea.reduced(padding / 2));
 
-    auto driveArea2 = band2CtrlArea.removeFromTop(driveLevelHeight);
-    band2Drive.setBounds(driveArea2.removeFromLeft(bandWidth * driveWidthRatio).reduced(padding / 2));
-    band2Level.setBounds(driveArea2.reduced(padding / 2));
+    auto band2DriveLevelArea = band2CtrlArea.removeFromTop(driveLevelHeight);
+    auto band2DriveArea = band2DriveLevelArea.removeFromLeft(bandWidth * driveWidthRatio);
+    auto band2LevelArea = band2DriveLevelArea;
+    band2DriveLabel.setBounds(band2DriveArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    band2Drive.setBounds(band2DriveArea.reduced(padding / 2));
+    band2LevelLabel.setBounds(band2LevelArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    band2Level.setBounds(band2LevelArea.reduced(padding / 2));
 
-    auto driveArea3 = band3CtrlArea.removeFromTop(driveLevelHeight);
-    band3Drive.setBounds(driveArea3.removeFromLeft(bandWidth * driveWidthRatio).reduced(padding / 2));
-    band3Level.setBounds(driveArea3.reduced(padding / 2));
+    auto band3DriveLevelArea = band3CtrlArea.removeFromTop(driveLevelHeight);
+    auto band3DriveArea = band3DriveLevelArea.removeFromLeft(bandWidth * driveWidthRatio);
+    auto band3LevelArea = band3DriveLevelArea;
+    band3DriveLabel.setBounds(band3DriveArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    band3Drive.setBounds(band3DriveArea.reduced(padding / 2));
+    band3LevelLabel.setBounds(band3LevelArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    band3Level.setBounds(band3LevelArea.reduced(padding / 2));
 
-    auto driveArea4 = band4CtrlArea.removeFromTop(driveLevelHeight);
-    band4Drive.setBounds(driveArea4.removeFromLeft(bandWidth * driveWidthRatio).reduced(padding / 2));
-    band4Level.setBounds(driveArea4.reduced(padding / 2));
+    auto band4DriveLevelArea = band4CtrlArea.removeFromTop(driveLevelHeight);
+    auto band4DriveArea = band4DriveLevelArea.removeFromLeft(bandWidth * driveWidthRatio);
+    auto band4LevelArea = band4DriveLevelArea;
+    band4DriveLabel.setBounds(band4DriveArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    band4Drive.setBounds(band4DriveArea.reduced(padding / 2));
+    band4LevelLabel.setBounds(band4LevelArea.removeFromTop(bandLabelHeight).reduced(padding / 2));
+    band4Level.setBounds(band4LevelArea.reduced(padding / 2));
 
     //distortion types
     auto comboBoxHeight = int(totalBandAreaHeight * 0.1);
+    
     band1Selector.setBounds(band1CtrlArea.removeFromTop(comboBoxHeight).reduced(padding / 2));
     band2Selector.setBounds(band2CtrlArea.removeFromTop(comboBoxHeight).reduced(padding / 2));
     band3Selector.setBounds(band3CtrlArea.removeFromTop(comboBoxHeight).reduced(padding / 2));
     band4Selector.setBounds(band4CtrlArea.removeFromTop(comboBoxHeight).reduced(padding / 2));
-
 
     //mute/Solo buttons
     auto muteSoloArea1 = band1CtrlArea;

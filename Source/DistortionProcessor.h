@@ -18,6 +18,11 @@ public:
     float processSample(float input);
     void reset();
 private:
+    //dc removal
+    float dcEstimate = 0.0f;
+    float dcAlpha = 0.999f;
+
+
     //initaliser
     DistortionTypes type = DistortionTypes::SoftClip;
 
@@ -29,6 +34,7 @@ private:
     float asymmetricClip(float input);
     float fullRectify(float input);
     float halfRectify(float input);
+    float removeDC(float input);
 
     //states for other types of dist
 };

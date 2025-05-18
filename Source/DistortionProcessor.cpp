@@ -8,6 +8,8 @@
   ==============================================================================
 */
 
+#define _USE_MATH_DEFINES
+
 #include "DistortionProcessor.h"
 #include <cmath>
 #include <algorithm>
@@ -52,7 +54,7 @@ float DistortionProcessor::expDistortion(float input) {
 }
 
 float DistortionProcessor::cubicSoftClip(float input) {
-    return 1.5f * input - 0.5f * std::pow(input, 3);
+    return 1.5f * input - 0.5f * input * input * input;
 }
 
 float DistortionProcessor::arctangentClip(float input) {
@@ -64,15 +66,20 @@ float DistortionProcessor::asymmetricClip(float input) {
     const float G = 5.0f;
     const float H = 2.0f;
     if (input >= 0.0f)
-        return std::atan(G * input) / std::atan(G);
+        return removeDC(std::atan(G * input) / std::atan(G));
     else
-        return std::atan(G * H * input) / std::atan(G * H);
+        return removeDC(std::atan(G * H * input) / std::atan(G * H));
 }
 
 float DistortionProcessor::fullRectify(float input) {
-    return std::abs(input);
+    return removeDC(std::abs(input));
 }
 
 float DistortionProcessor::halfRectify(float input) {
-    return std::max(0.0f, input);
+    return removeDC(std::max(0.0f, input));
+}
+
+float DistortionProcessor::removeDC(float input){
+    dcEstimate = dcAlpha * dcEstimate + (1.0f - dcAlpha) * input;
+    return input - dcEstimate;
 }

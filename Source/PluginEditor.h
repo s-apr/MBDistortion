@@ -44,6 +44,7 @@ private:
 
     //band sliders 'drive'
     juce::Slider band1Drive, band2Drive, band3Drive, band4Drive;
+    juce::Label band1DriveLabel, band2DriveLabel, band3DriveLabel, band4DriveLabel;
 
     //band sliders attachmnents
     using SliderAttachment = juce::AudioProcessorValueTreeState::SliderAttachment;
@@ -54,6 +55,7 @@ private:
 
     //distortion selectors
     juce::ComboBox band1Selector, band2Selector, band3Selector, band4Selector;
+    juce::Label band1SelectorLabel, band2SelectorLabel, band3SelectorLabel, band4SelectorLabel;
 
     //distortion selector attachments
     using ComboBoxAttachment = juce::AudioProcessorValueTreeState::ComboBoxAttachment;
@@ -64,7 +66,9 @@ private:
 
     //other sliders and bypass etc
     juce::Slider inputGainSlider, outputGainSlider, masterMixSlider;
+    juce::Label inputGainLabel, outputGainLabel, masterMixLabel;
     juce::ToggleButton bypassButton;
+    juce::Label bypassLabel;
 
     SliderAttachment inputGainSliderAttachment{ audioProcessor.parameters, "inputGain", inputGainSlider };
     SliderAttachment outputGainSliderAttachment{ audioProcessor.parameters, "outputGain", outputGainSlider };
@@ -75,12 +79,14 @@ private:
 
     //crossover sliders
     juce::Slider crossover1Slider, crossover2Slider, crossover3Slider;
+    juce::Label crossover1Label, crossover2Label, crossover3Label;
     SliderAttachment crossover1Slider1Attachment{ audioProcessor.parameters, "crossoverFreq1", crossover1Slider };
     SliderAttachment crossover2SliderAttachment{ audioProcessor.parameters, "crossoverFreq2", crossover2Slider };
     SliderAttachment crossover3SliderAttachment{ audioProcessor.parameters, "crossoverFreq3", crossover3Slider };
 
     //band levels
     juce::Slider band1Level, band2Level, band3Level, band4Level;
+    juce::Label band1LevelLabel, band2LevelLabel, band3LevelLabel, band4LevelLabel;
     SliderAttachment band1LevelAttachment{ audioProcessor.parameters, "band1level", band1Level };
     SliderAttachment band2LevelAttachment{ audioProcessor.parameters, "band2level", band2Level };
     SliderAttachment band3LevelAttachment{ audioProcessor.parameters, "band3level", band3Level };
@@ -100,6 +106,7 @@ private:
 
     //oversample selector
     juce::ComboBox oversampleSelector;
+    juce::Label oversampleLabel;
     std::unique_ptr<ComboBoxAttachment> oversampleSelectorAttachment;
 
     //characteristic curve dispaly

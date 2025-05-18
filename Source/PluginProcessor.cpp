@@ -523,7 +523,8 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
             }
         }
     }
-
+        
+        //oscilloscope visualisation
         auto* readPtr = buffer.getReadPointer(0);
         for (int i = 0; i < buffer.getNumSamples(); i++)
         {

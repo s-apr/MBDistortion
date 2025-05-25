@@ -15,13 +15,13 @@ class DistortionProcessor {
 public:
     DistortionProcessor() = default;
     void setDistortionType(DistortionTypes newType);
+    DistortionTypes getType() const { return type; };
     float processSample(float input);
     void reset();
 private:
     //dc removal
     float dcEstimate = 0.0f;
     float dcAlpha = 0.999f;
-
 
     //initaliser
     DistortionTypes type = DistortionTypes::SoftClip;

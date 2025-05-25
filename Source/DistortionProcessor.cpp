@@ -54,7 +54,7 @@ float DistortionProcessor::expDistortion(float input) {
 }
 
 float DistortionProcessor::cubicSoftClip(float input) {
-    return 1.5f * input - 0.5f * input * input * input;
+    return std::clamp(1.5f * input - 0.5f * input * input * input, -1.0f, 1.0f);
 }
 
 float DistortionProcessor::arctangentClip(float input) {

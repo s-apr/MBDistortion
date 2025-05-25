@@ -450,23 +450,33 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 float highMid = mHighMidBandLP[channel].process(mHighMidBandHP[channel].process(input));
                 float high = mHighBandHP[channel].process(input);
 
+                //specifically done to avoid phase issues when using dry/wet
+                //filters inherently introduce phase shifts
+                //so we cannot use the original input signal
+                float dryMix = low + lowMid + highMid + high;
+
                 //ACTUAL DRIVE
-                low *= band1Drive;
+                if (lowBandDistortion.getType() != DistortionTypes::None)
+                    low *= band1Drive;
+
                 low = lowBandDistortion.processSample(low);
-                //BAND LEVEL
                 low *= band1Level;
 
-                lowMid *= band2Drive;
+                if (lowMidBandDistortion.getType() != DistortionTypes::None)
+                    lowMid *= band2Drive;
+
                 lowMid = lowMidBandDistortion.processSample(lowMid);
                 lowMid *= band2Level;
 
+                if (highMidBandDistortion.getType() != DistortionTypes::None)
+                    highMid *= band3Drive;
 
-                highMid *= band3Drive;
                 highMid = highMidBandDistortion.processSample(highMid);
                 highMid *= band3Level;
 
+                if (highBandDistortion.getType() != DistortionTypes::None)
+                    high *= band4Drive;
 
-                high *= band4Drive;
                 high = highBandDistortion.processSample(high);
                 high *= band4Level;
 
@@ -476,8 +486,8 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 if (mute[2] || (anySolo && !solo[2])) highMid = 0.0f;
                 if (mute[3] || (anySolo && !solo[3])) high = 0.0f;
 
-                float wet = (low + lowMid + highMid + high) * outputGain;
-                samples[i] = input * (1.0f - masterMix) + wet * masterMix;
+                float wet = (low + lowMid + highMid + high);
+                samples[i] = dryMix * (1.0f - masterMix) + wet * masterMix;
 
             }
             oversampler.processSamplesDown(channelBlock);
@@ -502,14 +512,32 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 float highMid = mHighMidBandLP[channel].process(mHighMidBandHP[channel].process(input));
                 float high = mHighBandHP[channel].process(input);
 
-                low *= band1Drive;
+                //specifically done to avoid phase issues when using dry/wet
+                float dryMix = low + lowMid + highMid + high;
+
+                if (lowBandDistortion.getType() != DistortionTypes::None)
+                    low *= band1Drive;
+
                 low = lowBandDistortion.processSample(low);
-                lowMid *= band2Drive;
+                low *= band1Level;
+
+                if (lowMidBandDistortion.getType() != DistortionTypes::None)
+                    lowMid *= band2Drive;
+
                 lowMid = lowMidBandDistortion.processSample(lowMid);
-                highMid *= band3Drive;
+                lowMid *= band2Level;
+
+                if (highMidBandDistortion.getType() != DistortionTypes::None)
+                    highMid *= band3Drive;
+
                 highMid = highMidBandDistortion.processSample(highMid);
-                high *= band4Drive;
+                highMid *= band3Level;
+
+                if (highBandDistortion.getType() != DistortionTypes::None)
+					high *= band4Drive;
+
                 high = highBandDistortion.processSample(high);
+                high *= band4Level;
 
                 //solo, mute
                 if (mute[0] || (anySolo && !solo[0])) low = 0.0f;
@@ -517,8 +545,8 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
                 if (mute[2] || (anySolo && !solo[2])) highMid = 0.0f;
                 if (mute[3] || (anySolo && !solo[3])) high = 0.0f;
 
-                float wet = (low + lowMid + highMid + high) * outputGain;
-                channelData[sample] = input * (1.0f - masterMix) + wet * masterMix;
+                float wet = (low + lowMid + highMid + high);
+                channelData[sample] = dryMix * (1.0f - masterMix) + wet * masterMix;
 
             }
         }
@@ -530,6 +558,8 @@ void MBDistortionAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer,
         {
             oscBuffer.write(readPtr[i]);
         }
+
+        buffer.applyGain(outputGain);
 
 }
 

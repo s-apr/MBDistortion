@@ -506,9 +506,13 @@ void MBDistortionAudioProcessorEditor::drawCharacteristicCurve(juce::Graphics& g
 
     for (int i = 0; i < numPoints; ++i)
     {
+
         float currentInput = juce::jmap((float)i, 0.0f, (float)(numPoints - 1), inputMin, inputMax);
 
-        float drivenInput = currentInput * driveGain;
+        float drivenInput = currentInput;
+
+        if (type != DistortionTypes::None)
+            drivenInput *= driveGain;
 
         float processedSample = tempDistortion.processSample(drivenInput);
 
